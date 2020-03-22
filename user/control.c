@@ -8,7 +8,6 @@ Motor_Outer_loop();
 F450四轴，X型，红前白后，从右前方电机编号为1开始逆时针编号
 ********************************************/
 short PwmOut[4]={0,0,0,0};  //把值赋给定时器，输出PWM
-float IIRroll[3],IIRpitch[3];
 
 /**********************
 控制参数初始化
@@ -36,22 +35,20 @@ void Motor_Iner_loop(void)
 	}
 	float gx=GyroToDeg(gyro.x);
 	float gy=GyroToDeg(gyro.y);
-	gx=IIR_LowPassFilter(gx,IIRroll);
-	gy=IIR_LowPassFilter(gy,IIRpitch);
 	ADRC_LESO(adrcRoll.PosOut,gx,1,&adrcRoll.gEst,&adrcRoll.AccEst);
 	ADRC_LESO(adrcPitch.PosOut,gx,1,&adrcPitch.gEst,&adrcPitch.AccEst);
 	adrcRoll.SpeOut=adrcRoll.KpIn*(adrcRoll.PosOut-gx);
 	adrcPitch.SpeOut=adrcPitch.KpIn*(adrcPitch.PosOut-gx);
 	float RollOut=adrcRoll.KdIn*(adrcRoll.SpeOut-adrcRoll.AccEst);
 	float PitchOut=adrcPitch.KdIn*(adrcPitch.SpeOut-adrcPitch.AccEst);
-	PwmOut[0]=DegToPwmAdd(+RollOut+PitchOut);
-	PwmOut[1]=DegToPwmAdd(-RollOut+PitchOut);
-	PwmOut[2]=DegToPwmAdd(-RollOut-PitchOut);
-	PwmOut[3]=DegToPwmAdd(+RollOut-PitchOut);
-	MOTOR1=LIMIT(PwmOut[0],LOWSPEED,1000);
-	MOTOR2=LIMIT(PwmOut[1],LOWSPEED,1000);
-	MOTOR3=LIMIT(PwmOut[2],LOWSPEED,1000);
-	MOTOR4=LIMIT(PwmOut[3],LOWSPEED,1000);
+	PwmOut[0]=RCdata[2]+DegToPwm(+RollOut+PitchOut);
+	PwmOut[1]=RCdata[2]+DegToPwm(-RollOut+PitchOut);
+	PwmOut[2]=RCdata[2]+DegToPwm(-RollOut-PitchOut);
+	PwmOut[3]=RCdata[2]+DegToPwm(+RollOut-PitchOut);
+	MOTOR1=LIMIT(PwmOut[0],0,1000);
+	MOTOR2=LIMIT(PwmOut[1],0,1000);
+	MOTOR3=LIMIT(PwmOut[2],0,1000);
+	MOTOR4=LIMIT(PwmOut[3],0,1000);
 }
 
 /**********************

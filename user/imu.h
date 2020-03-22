@@ -10,11 +10,11 @@
 #define DegToGyro(x)          ((short)((x)*131.072))  //(x*2^15/250)
 #define RadToDeg(x)           ((x)*57.2957795131)   //(x*57.3)
 #define RadToGyro(x)          ((short)((x)*7509.8724))  //(x*2^15/250*57.3)
-#define DegToPwmAdd(x)        ((x)/9.0*50.0+1500)
+#define DegToPwmAdd(x)        ((x)/9.0*50.0+500)
 #define DegToPwm(x)           ((x)/9.0*50.0)
-#define PwmToDegAdd(x)        ((((float)(x))-1500.0)*0.18)
+#define PwmToDegAdd(x)        ((((float)(x))-500.0)*0.18)
 #define PwmToDeg(x)           ((float)(x)*0.18)
-#define PwmToRadAdd(x)        (((float)(x)-1500.0)*0.00314159265)
+#define PwmToRadAdd(x)        (((float)(x)-500.0)*0.00314159265)
 
 typedef struct
 {
@@ -27,6 +27,7 @@ typedef struct
 
 float IIR_LowPassFilter(float DataIn,float *delay);
 void Acc_Calibrate(AxisInt *acc);
+void GYRO_Calibrate(AxisInt *gyro);
 void IMUupdate(AxisInt acc,AxisInt *gyro,Quaternion *Q);
 
 #endif

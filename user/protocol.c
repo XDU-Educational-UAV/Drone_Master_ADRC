@@ -30,48 +30,49 @@ void Protocol_Init(void)
 **********************/
 u8 XDAA_Data_Receive_Precess(void)
 {
-	static u8 RxState=0,sum=0,i=0;
-	switch(RxState)
+	static u8 zRxState=0,sum=0,i=0;
+	switch(zRxState)
 	{
 	case 0:  //帧头校验
 		if(RxData=='<')
 		{
 			sum=RxData;
-			RxState=1;
+			zRxState=1;
 		}
 		break;
 	case 1:  //功能字校验与保存
 		sum+=RxData;
 		FcnWord=RxData;
-		RxState=2;
+		zRxState=2;
 		break;
 	case 2:  //数据长度校验与保存
 		if(RxData<=12)
 		{
 			sum+=RxData;
 			LenWord=RxData;
-			RxState=3;
+			zRxState=3;
 		}
 		else
 		{
 			sum=0;
-			RxState=0;
+			zRxState=0;
 		}
 		break;
 	case 3:  //临时保存待用数据
 		sum+=RxData;
 		RxTemp[i++]=RxData;
 		if(i>=LenWord)
-			RxState=4;
+			zRxState=4;
 		break;
 	case 4:  //匹配校验和
-		RxState=0;
+		zRxState=0;
 		i=0;
 		if(sum==RxData)
 			return 0;  //待用数据有效
-		break;
+		else
+			return 1;
 	default:
-		RxState=0;
+		zRxState=0;
 		return 1;
 	}
 	return 1;  //待用数据无效
@@ -92,6 +93,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			RCmsg=RxTemp[0];
 		break;
 	case P_CTRL:
+		LenWord/=2;
 		for(u8 i=0;i<LenWord;i++)
 			RCchannel[i]=(RxTemp[2*i]<<8) | RxTemp[2*i+1];
 		break;

@@ -14,6 +14,7 @@ AxisInt ogyro;  //三轴陀螺仪原始数据
 short RCdata[4];  //遥控器控制数据(跨文件全局变量)
 ADRC_Param adrcRoll,adrcPitch;  //自抗扰控制器参数(跨文件全局变量)
 u8 GlobalStat=0;  //全局状态(跨文件全局变量)
+float IIRroll[3],IIRpitch[3],IIRyaw[3];
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -24,7 +25,11 @@ void IMU_Processing(void)
 	MPU_Get_Accelerometer(&acc.x,&acc.y,&acc.z);
 	MPU_Get_Gyroscope(&gyro.x,&gyro.y,&gyro.z);
 	oacc=acc;ogyro=gyro;
+//	gyro.x=IIR_LowPassFilter(gyro.x,IIRroll);
+//	gyro.y=IIR_LowPassFilter(gyro.y,IIRpitch);
+//	gyro.z=IIR_LowPassFilter(gyro.z,IIRyaw);
 	Acc_Calibrate(&acc);
+//	GYRO_Calibrate(&gyro);
 	IMUupdate(acc,&gyro,&Qpos);
 }
 
@@ -92,7 +97,14 @@ void Send_Data(void)
 	data[0]=acc.x;data[1]=acc.y;data[2]=acc.z;
 	data[3]=gyro.x;data[4]=gyro.y;data[5]=gyro.z;
 	XDAA_Send_S16_Data(data,6,P_SENSOR);
-	XDAA_Send_S16_Data(RCdata,4,P_CTRL);
+	XDAA_Send_S16_Data(RCdata,4,P_CTRL);	
+	float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
+	float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
+	float yaw=Matan2(2*(Qpos.q1*Qpos.q2+Qpos.q0*Qpos.q3),1-2*(Qpos.q2*Qpos.q2+Qpos.q3*Qpos.q3))*57.3f;
+	data[0]=(s16)(roll*100);
+	data[1]=(s16)(pitch*100);
+	data[2]=(s16)(yaw*100);
+	XDAA_Send_S16_Data(data,3,P_ATTI);
 	count++;
 	if(count>=10)
 	{
