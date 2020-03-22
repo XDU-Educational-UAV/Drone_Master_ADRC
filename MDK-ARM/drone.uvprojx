@@ -49,7 +49,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>testCube\</OutputDirectory>
-          <OutputName>testCube</OutputName>
+          <OutputName>drone</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>0</CreateHexFile>
@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32G030xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;../Drivers/STM32G0xx_HAL_Driver/Inc;../Drivers/STM32G0xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G0xx/Include;../Drivers/CMSIS/Include;..\user</IncludePath>
+              <IncludePath>../Inc;   ../Drivers/STM32G0xx_HAL_Driver/Inc;   ../Drivers/STM32G0xx_HAL_Driver/Inc/Legacy;   ../Drivers/CMSIS/Device/ST/STM32G0xx/Include;   ../Drivers/CMSIS/Include;   ..\user</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -403,6 +403,11 @@
               <FilePath>../Src/gpio.c</FilePath>
             </File>
             <File>
+              <FileName>adc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Src/adc.c</FilePath>
+            </File>
+            <File>
               <FileName>dma.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Src/dma.c</FilePath>
@@ -438,14 +443,19 @@
               <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_gpio.c</FilePath>
             </File>
             <File>
-              <FileName>stm32g0xx_hal_tim.c</FileName>
+              <FileName>stm32g0xx_hal_adc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim.c</FilePath>
+              <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c</FilePath>
             </File>
             <File>
-              <FileName>stm32g0xx_hal_tim_ex.c</FileName>
+              <FileName>stm32g0xx_hal_adc_ex.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim_ex.c</FilePath>
+              <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32g0xx_ll_adc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_adc.c</FilePath>
             </File>
             <File>
               <FileName>stm32g0xx_hal_rcc.c</FileName>
@@ -508,6 +518,16 @@
               <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_exti.c</FilePath>
             </File>
             <File>
+              <FileName>stm32g0xx_hal_tim.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32g0xx_hal_tim_ex.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim_ex.c</FilePath>
+            </File>
+            <File>
               <FileName>stm32g0xx_hal_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart.c</FilePath>
@@ -546,6 +566,31 @@
               <FileName>mpuiic.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\user\mpuiic.c</FilePath>
+            </File>
+            <File>
+              <FileName>adrc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\adrc.c</FilePath>
+            </File>
+            <File>
+              <FileName>control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\control.c</FilePath>
+            </File>
+            <File>
+              <FileName>imu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\imu.c</FilePath>
+            </File>
+            <File>
+              <FileName>task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\task.c</FilePath>
+            </File>
+            <File>
+              <FileName>mymath.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\mymath.c</FilePath>
             </File>
           </Files>
         </Group>

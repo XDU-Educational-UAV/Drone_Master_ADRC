@@ -3,30 +3,34 @@
 地面站和飞控通过串口进行数据通信
 ********************************************/
 //数据拆分宏定义，在发送大于1字节的数据类型时，比如int16、float等，需要把数据拆分成单独字节进行发送
-#define BYTE0(dwTemp)       ( *( (char *)(&dwTemp)		) )
+#define BYTE0(dwTemp)       ( *( (char *)(&dwTemp)    ) )
 #define BYTE1(dwTemp)       ( *( (char *)(&dwTemp) + 1) )
 #define BYTE2(dwTemp)       ( *( (char *)(&dwTemp) + 2) )
 #define BYTE3(dwTemp)       ( *( (char *)(&dwTemp) + 3) )
 
-/*与串口硬件相关的程序*/
-u8 RxData;
-u8 RxTemp[14];  //临时保存串口接收到的待用数据
-short CtrlCmd[4];
-u8 RCcmd=0;
-/**
-建立DMA接收通道
-*/
+/*串口接收部分**********************************/
+u8 RxData;  //从串口收到的一个字节
+u8 RxTemp[12];  //临时保存串口接收到的待用数据
+u8 FcnWord;  //功能字节(跨文件全局变量)
+u8 LenWord;  //长度字节(跨文件全局变量)
+u8 ErrCnt=0;  //未收到遥控器信号的次数(跨文件全局变量)
+//以下为遥控器数据保存
+short RCchannel[4];  //遥控器的4个控制通道(跨文件全局变量)
+u8 RCmsg=0;  //其余有关的遥控器命令(跨文件全局变量)
+
+/***********************
+建立DMA接收通道,从地面站/遥控器接收数据
+**********************/
 void Protocol_Init(void)
 {
 	HAL_UART_Receive_DMA(&huart2,&RxData,1);
 }
-/**
+/***********************
 接收字节处理
-*/
+**********************/
 u8 XDAA_Data_Receive_Precess(void)
 {
-	static u8 RxState=0;
-	static u8 sum=0,i=2;
+	static u8 RxState=0,sum=0,i=0;
 	switch(RxState)
 	{
 	case 0:  //帧头校验
@@ -37,31 +41,16 @@ u8 XDAA_Data_Receive_Precess(void)
 		}
 		break;
 	case 1:  //功能字校验与保存
-		if(RxData<=4)
-		{
-			sum+=RxData;
-			RxTemp[0]=RxData;
-			RxState=2;
-		}
-		else if(RxData=='<')  //从帧头重新开始
-			sum=RxData;
-		else
-		{
-			sum=0;
-			RxState=0;
-		}
+		sum+=RxData;
+		FcnWord=RxData;
+		RxState=2;
 		break;
 	case 2:  //数据长度校验与保存
-		if(RxState<=12)
+		if(RxData<=12)
 		{
 			sum+=RxData;
-			RxTemp[1]=RxData;
+			LenWord=RxData;
 			RxState=3;
-		}
-		else if(RxData=='<')  //从帧头重新开始
-		{
-			sum=RxData;
-			RxState=1;
 		}
 		else
 		{
@@ -72,60 +61,114 @@ u8 XDAA_Data_Receive_Precess(void)
 	case 3:  //临时保存待用数据
 		sum+=RxData;
 		RxTemp[i++]=RxData;
-		if(i>=RxTemp[1]+2)
+		if(i>=LenWord)
 			RxState=4;
 		break;
 	case 4:  //匹配校验和
 		RxState=0;
-		i=2;
+		i=0;
 		if(sum==RxData)
 			return 0;  //待用数据有效
 		break;
-	default:break;
+	default:
+		RxState=0;
+		return 1;
 	}
 	return 1;  //待用数据无效
 }
-/**
+/***********************
 串口通过DMA方式接收到一个字节
-*/
+**********************/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	if(huart->Instance!=USART2)
+		return;
 	if(XDAA_Data_Receive_Precess())
 		return;
-	u8 len=RxTemp[1]/2+1;
-	switch(RxTemp[0])
+	switch(FcnWord)
 	{
-	case FLY_CTRL:
-		for(u8 i=1;i<len;i++)
-			CtrlCmd[i-1]=(RxTemp[2*i]<<8) | RxTemp[2*i+1];
+	case P_STAT:
+		if(RxTemp[1]==WHO_AM_I)
+			RCmsg=RxTemp[0];
+		break;
+	case P_CTRL:
+		for(u8 i=0;i<LenWord;i++)
+			RCchannel[i]=(RxTemp[2*i]<<8) | RxTemp[2*i+1];
 		break;
 	default:break;
 	}
+	ErrCnt=0;
+	RCmsg|=RC_RECEIVE;
 }
-
-/*协议正式开始*/
-u8 DataToSend[16];
-/**
-飞控->地面站 发送用户自定义帧
-*@UserFrame:用户数据数组
-*@len:数组长度(30以内)
-*@fun:功能码(0xF1~0xFA)
-*/
-void XDAA_Send_User_Data(s16 *UserFrame,u8 len)
+/*串口发送部分**********************************/
+u8 DataToSend[16];  //待发送的数据
+u8 SendBuff[SENDBUF_SIZE];  //发送缓冲区
+u16 TotalLen=0;  //发送缓冲区待发送数据长度
+/***********************
+将待发送数据存入缓冲
+**********************/
+void DMA_Stuff(u8 *Data,u8 len)
+{
+	if(len==0)
+	{
+		TotalLen=0;
+		return;
+	}
+	u8 i;
+	for(i=0;i<len;i++)
+	{
+		if(TotalLen+i>=SENDBUF_SIZE)
+			return;//若发送速率不够快导致缓冲区满则放弃新的数据
+		SendBuff[TotalLen+i]=Data[i];
+	}
+	TotalLen+=len;
+}
+/***********************
+将发送缓冲区的数据填入DMA发送并清空发送缓冲区
+**********************/
+void Total_Send(void)
+{
+	if(TotalLen==0)
+		return;
+	HAL_UART_Transmit_DMA(&huart2,SendBuff,TotalLen);
+	DMA_Stuff(0,0);
+}
+/***********************
+*@data:s16型数据
+*@len:数据个数
+*@fcn:功能字
+**********************/
+void XDAA_Send_S16_Data(s16 *data,u8 len,u8 fcn)
 {
 	u8 i,cnt=0,checksum=0;
-	s16 temp;
 	DataToSend[cnt++]='>';
-	DataToSend[cnt++]=0xF1;
+	DataToSend[cnt++]=fcn;
 	DataToSend[cnt++]=len*2;
 	for(i=0;i<len;i++)
 	{
-		temp = UserFrame[i];
-		DataToSend[cnt++]=BYTE1(temp);
-		DataToSend[cnt++]=BYTE0(temp);
+		DataToSend[cnt++]=BYTE1(data[i]);
+		DataToSend[cnt++]=BYTE0(data[i]);
 	}
-	for(i=0;i<DataToSend[2];i++)
-		checksum+=DataToSend[i+2];
+	for(i=0;i<cnt;i++)
+		checksum+=DataToSend[i];
 	DataToSend[cnt++]=checksum;
-	XDAA_Send_Data(DataToSend,cnt);
+	DMA_Stuff(DataToSend,cnt);
+}
+/***********************
+*@data:u8型数据
+*@len:数据个数
+*@fcn:功能字
+**********************/
+void XDAA_Send_U8_Data(u8 *data,u8 len,u8 fcn)
+{
+	u8 i,cnt=0,checksum=0;
+	DataToSend[cnt++]='>';
+	DataToSend[cnt++]=fcn;
+	DataToSend[cnt++]=len;
+	for(i=0;i<len;i++)
+		DataToSend[cnt++]=data[i];
+	for(i=0;i<cnt;i++)
+		checksum+=DataToSend[i];
+	DataToSend[cnt++]=checksum;
+	DMA_Stuff(DataToSend,cnt);
 }

@@ -1,9 +1,5 @@
 #include "mpu6050.h"
-/*ATK-MPU6050模块用法
-俯仰角pitch横滚角row航向角yaw
-MPU6050模块水平放置,排针朝下朝右,芯片原点位于右上角,
-向左横滚roll和gyrox为正,accy为正；抬头pitch和gyroy为正，accx为负；向左偏航yaw和gyroz为正
-*/
+
 void Delay_ms(unsigned short time_ms)
 {
 	unsigned short i, j;
@@ -89,9 +85,7 @@ u8 MPU_Get_Accelerometer(short *ax, short *ay, short *az)
 //其他,错误代码
 u8 MPU_Init(void)
 {
-	u8 res, status;
-	res=0;
-	status=0;
+	u8 res,status=0;
 	status |= IIC_Write_Reg(0x6B,0x80);  //复位MPU6050
 	Delay_ms(100);
 	status |= IIC_Write_Reg(0x6B,0x00);  //唤醒MPU6050 
@@ -102,7 +96,7 @@ u8 MPU_Init(void)
 	status |= IIC_Write_Reg(0x6C,0x00);  //加速度与陀螺仪都工作
 	status |= MPU_Set_Gyro_Fsr(0);  //陀螺仪传感器,±250dps
 	status |= MPU_Set_Accel_Fsr(0);  //加速度传感器,±2g
-	status |= MPU_Set_Rate(50);  //设置采样率50Hz
+	status |= MPU_Set_Rate(500);  //设置采样率500Hz
 	status |= IIC_Read_Reg(0x75,&res);  //读取器件ID
 	if (res != 0x68)//器件ID正确
 		status |= 1;
