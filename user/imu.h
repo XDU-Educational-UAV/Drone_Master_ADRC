@@ -3,7 +3,7 @@
 
 #include "mymath.h"
 
-//单位转换:gyro[-16383,16384];deg[-90,90];rad[-PI/2,PI/2];pwm[1000,2000];pwmAdd[-1000,1000]
+//单位转换:gyro[-16383,16384];deg[-90,90];rad[-PI/2,PI/2];pwm[0,1000];pwmAdd[-500,500]
 #define GyroToDeg(x)          ((float)(x)*0.0076293945)  //(x*250/2^15)
 #define GyroToRad(x)          ((float)(x)*1.331580545e-4)
 #define DegToRad(x)           ((x)*0.0174532925)  //(x/57.3)

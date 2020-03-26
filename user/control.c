@@ -16,8 +16,8 @@ short PwmOut[4]={0,0,0,0};  //把值赋给定时器，输出PWM
 void Para_Init(void)
 {
 	MOTOR1=PwmOut[0];MOTOR2=PwmOut[1];MOTOR3=PwmOut[2];MOTOR4=PwmOut[3];
-	adrcRoll.KpOut=0;adrcRoll.KpIn=2;adrcRoll.KdIn=0.1,adrcRoll.AccEst=0;
-	adrcPitch.KpOut=0;adrcPitch.KpIn=2;adrcPitch.KdIn=0.1,adrcPitch.AccEst=0;
+	adrcRoll.KpOut=0;adrcRoll.KpIn=2;adrcRoll.KdIn=0.1;
+	adrcPitch.KpOut=0;adrcPitch.KpIn=2;adrcPitch.KdIn=0.1;
 }
 
 /**********************
@@ -33,29 +33,40 @@ void Motor_Iner_loop(void)
 		MOTOR4=0;
 		return;
 	}
+	if(RCdata[2]<=LOWSPEED)
+	{
+		MOTOR1=LOWSPEED;
+		MOTOR2=LOWSPEED;
+		MOTOR3=LOWSPEED;
+		MOTOR4=LOWSPEED;
+		return;
+	}
 	float gx=GyroToDeg(gyro.x);
 	float gy=GyroToDeg(gyro.y);
-	ADRC_LESO(adrcRoll.PosOut,gx,1,&adrcRoll.gEst,&adrcRoll.AccEst);
-	ADRC_LESO(adrcPitch.PosOut,gx,1,&adrcPitch.gEst,&adrcPitch.AccEst);
-	adrcRoll.SpeOut=adrcRoll.KpIn*(adrcRoll.PosOut-gx);
-	adrcPitch.SpeOut=adrcPitch.KpIn*(adrcPitch.PosOut-gx);
-	float RollOut=adrcRoll.KdIn*(adrcRoll.SpeOut-adrcRoll.AccEst);
-	float PitchOut=adrcPitch.KdIn*(adrcPitch.SpeOut-adrcPitch.AccEst);
-	PwmOut[0]=RCdata[2]+DegToPwm(+RollOut+PitchOut);
-	PwmOut[1]=RCdata[2]+DegToPwm(-RollOut+PitchOut);
-	PwmOut[2]=RCdata[2]+DegToPwm(-RollOut-PitchOut);
-	PwmOut[3]=RCdata[2]+DegToPwm(+RollOut-PitchOut);
-	MOTOR1=LIMIT(PwmOut[0],0,1000);
-	MOTOR2=LIMIT(PwmOut[1],0,1000);
-	MOTOR3=LIMIT(PwmOut[2],0,1000);
-	MOTOR4=LIMIT(PwmOut[3],0,1000);
+	ADRC_LESO(adrcRoll.u,gx,1,&adrcRoll.gEst,&adrcRoll.AccEst,&adrcRoll.w);
+	ADRC_LESO(adrcPitch.u,gy,1,&adrcPitch.gEst,&adrcPitch.AccEst,&adrcPitch.w);
+	adrcRoll.u=adrcRoll.PosOut-adrcRoll.KpIn*gx-adrcRoll.KdIn*adrcRoll.AccEst;
+	adrcPitch.u=adrcPitch.PosOut-adrcPitch.KpIn*gy-adrcPitch.KdIn*adrcPitch.AccEst;
+	PwmOut[0]=RCdata[2]+DegToPwm(-adrcRoll.u-adrcPitch.u);
+	PwmOut[1]=RCdata[2]+DegToPwm(-adrcRoll.u+adrcPitch.u);
+	PwmOut[2]=RCdata[2]+DegToPwm(+adrcRoll.u+adrcPitch.u);
+	PwmOut[3]=RCdata[2]+DegToPwm(+adrcRoll.u-adrcPitch.u);
+	MOTOR1=LIMIT(PwmOut[0],LOWSPEED,1000);
+	MOTOR2=LIMIT(PwmOut[1],LOWSPEED,1000);
+	MOTOR3=LIMIT(PwmOut[2],LOWSPEED,1000);
+	MOTOR4=LIMIT(PwmOut[3],LOWSPEED,1000);
 }
 
+#define SPEED  //角速度模式
 /**********************
 电机外环比例控制
 **********************/
 void Motor_Outer_loop(void)
 {
+#ifdef SPEED
+	adrcRoll.PosOut=PwmToDegAdd(RCdata[0]);
+	adrcPitch.PosOut=PwmToDegAdd(RCdata[1]);
+#else
 	Quaternion Qexp;
 	float Hroll=PwmToRadAdd(RCdata[0])/2;
 	float Hpitch=PwmToRadAdd(RCdata[1])/2;
@@ -67,4 +78,5 @@ void Motor_Outer_loop(void)
 	Quaternion Qerr=Quaternion_Error(Qexp,Qpos);
 	adrcRoll.PosOut=adrcRoll.KpOut*RadToDeg(Masin(Qerr.q1));
 	adrcPitch.PosOut=adrcPitch.KpOut*RadToDeg(Masin(Qerr.q2));
+#endif
 }

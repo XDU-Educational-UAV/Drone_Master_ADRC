@@ -7,7 +7,7 @@ float ADRC_fhan(float x1,float x2);
 float ADRC_TD(float r,float *derivative);
 float ADRC_fal(float x);
 float ADRC_ESO(float u,float y,float b);
-float ADRC_LESO(float u,float y,float b,float *z1,float *z2);
+void ADRC_LESO(float u,float y,float b,float *z1,float *z2,float *w);
 Quaternion Quaternion_Error(Quaternion E,Quaternion P);
 
 //自抗扰控制器的控制参数与运行参数
@@ -20,9 +20,10 @@ typedef struct
 	float KdIn;   //内环加速度比例控制
 	//运行参数
 	float PosOut;    //位置误差输出
-	float SpeOut;    //速度误差输出
 	float gEst;      //角速度的状态估计
 	float AccEst;    //角加速度的状态估计
+	float w;         //总扰动
+	float u;     //控制器最终输出
 }ADRC_Param;
 
 #endif

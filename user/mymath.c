@@ -92,45 +92,8 @@ float Msin(float rad)
 }
 
 //指数函数
-double pow_i(double num, int n)//计算num的n次幂，其中n为正整数
+float Mexp(float x)
 {
-	double powint = 1;
-	int i;
-	for (i = 1; i <= n; i++) powint *= num;
-	return powint;
-}
-/*
-利用实数域的泰勒展开求指数
-(1+x)^m=1+mx+m(m-1)/2!+...
-x在收敛域(-1,1)内离原点越远，指数m越大，则误差越大
-*/
-double pow_f(double num, double m)//计算num的m次幂，num和m可为双精度，num在收敛域(0,2)内
-{
-	double powf = 1, tmpm = 1;//泰勒级数第1项是1
-	double x = num - 1;
-	for (int i = 1; ABS(tmpm) > 1e-12; i++)//泰勒级数最后一项非常接近于0时结束计算
-	{
-		tmpm *= (m - i + 1)*x / i;//泰勒级数第i项
-		powf += tmpm;
-	}
-	return powf;
-}
-float Mpow(float num, float m)//调用pow_f()和pow_i(),计算num的m次幂,是计算幂的入口
-{
-	if (num > 0 && num < 2 && m>0 && (m - (int)m) != 0)
-		return pow_f(num, (m - (int)m))*pow_i(num, (int)m);//分解为整数次幂和小数次幂运算，减小运算量和误差
-	if (num > 2)//收敛域之外
-		return Mpow(1 / num, -m);
-	if (num == 2)//收敛域边界，收敛速度非常慢，因此拆成两项
-		return Mpow(0.4, -m)*Mpow(0.8, m);
-	if (m == 0)//任何底数的0次幂为1，包括0
-		return 1;
-	if (num == 0)
-		return 0;
-	if (m < 0)
-		return 1 / Mpow(num, -m);
-	//以上情况为非负数的小数次幂，可看作最一般的情况
-	if (num < 0 && (m - (int)m) != 0)//负数的小数次幂，结果为复数，返回0表示忽略这种情况
-		return 0;
-	return pow_i(num, (int)m);//非零实数的整数次幂，最特殊的情况
+	long i = (long)(x * 12102203 + 1064872507);
+	return *(float*)&i;
 }

@@ -181,7 +181,6 @@ int main(void)
 		if(TaskFlag & TASK_1s)
 		{
 			GPIOB->ODR^=0x30;
-			ADC_Convert();
 			TaskFlag&=~TASK_1s;
 		}
 	}

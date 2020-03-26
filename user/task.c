@@ -14,7 +14,6 @@ AxisInt ogyro;  //三轴陀螺仪原始数据
 short RCdata[4];  //遥控器控制数据(跨文件全局变量)
 ADRC_Param adrcRoll,adrcPitch;  //自抗扰控制器参数(跨文件全局变量)
 u8 GlobalStat=0;  //全局状态(跨文件全局变量)
-float IIRroll[3],IIRpitch[3],IIRyaw[3];
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -22,14 +21,19 @@ float IIRroll[3],IIRpitch[3],IIRyaw[3];
 **********************/
 void IMU_Processing(void)
 {
+	static float IIRax[3],IIRay[3],IIRaz[3];
+	static float IIRgx[3],IIRgy[3],IIRgz[3];
 	MPU_Get_Accelerometer(&acc.x,&acc.y,&acc.z);
 	MPU_Get_Gyroscope(&gyro.x,&gyro.y,&gyro.z);
 	oacc=acc;ogyro=gyro;
-//	gyro.x=IIR_LowPassFilter(gyro.x,IIRroll);
-//	gyro.y=IIR_LowPassFilter(gyro.y,IIRpitch);
-//	gyro.z=IIR_LowPassFilter(gyro.z,IIRyaw);
+	acc.x=IIR_LowPassFilter(oacc.x,IIRax);
+	acc.y=IIR_LowPassFilter(oacc.y,IIRay);
+	acc.z=IIR_LowPassFilter(oacc.z,IIRaz);
+	gyro.x=IIR_LowPassFilter(ogyro.x,IIRgx);
+	gyro.y=IIR_LowPassFilter(ogyro.y,IIRgy);
+	gyro.z=IIR_LowPassFilter(ogyro.z,IIRgz);
 	Acc_Calibrate(&acc);
-//	GYRO_Calibrate(&gyro);
+	GYRO_Calibrate(&gyro);
 	IMUupdate(acc,&gyro,&Qpos);
 }
 
@@ -59,7 +63,10 @@ void RC_Processing(void)
 	{
 	case P_STAT:
 		if(RCmsg & MOTOR_LOCK)
-			GlobalStat|=MOTOR_LOCK;
+		{
+			if(RCdata[2]<=LOWSPEED)
+				GlobalStat|=MOTOR_LOCK;
+		}
 		else
 			GlobalStat&=~MOTOR_LOCK;
 		break;
@@ -93,22 +100,27 @@ void Send_Data(void)
 {
 	s16 data[6];
 	static u8 count=0;
-	u8 udata[2]={GlobalStat,(u8)AdcData};
+	u8 udata[2]={GlobalStat,(u8)Get_Battery_Voltage()};
 	data[0]=acc.x;data[1]=acc.y;data[2]=acc.z;
 	data[3]=gyro.x;data[4]=gyro.y;data[5]=gyro.z;
-	XDAA_Send_S16_Data(data,6,P_SENSOR);
-	XDAA_Send_S16_Data(RCdata,4,P_CTRL);	
+//	XDAA_Send_S16_Data(data,6,P_SENSOR);  //可不发
+	XDAA_Send_S16_Data(RCdata,4,P_CTRL);  //必发
 	float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
 	float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
 	float yaw=Matan2(2*(Qpos.q1*Qpos.q2+Qpos.q0*Qpos.q3),1-2*(Qpos.q2*Qpos.q2+Qpos.q3*Qpos.q3))*57.3f;
 	data[0]=(s16)(roll*100);
 	data[1]=(s16)(pitch*100);
 	data[2]=(s16)(yaw*100);
-	XDAA_Send_S16_Data(data,3,P_ATTI);
+//	XDAA_Send_S16_Data(data,3,P_ATTI);  //可不发
+	data[0]=MOTOR1;
+	data[1]=MOTOR2;
+	data[2]=MOTOR3;
+	data[3]=MOTOR4;
+	XDAA_Send_S16_Data(data,4,P_MOTOR);  //可不发
 	count++;
 	if(count>=10)
 	{
-		XDAA_Send_U8_Data(udata,2,1);
+		XDAA_Send_U8_Data(udata,2,1);  //推荐发
 		count=0;
 	}
 	Total_Send();

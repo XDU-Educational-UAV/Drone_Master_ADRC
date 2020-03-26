@@ -10,6 +10,7 @@
 #define P_ATTI         0x02
 #define P_SENSOR       0x04
 #define P_CTRL         0x08
+#define P_MOTOR        0x10
 //RCmsg
 #define RC_RECEIVE     0x80
 #define MOTOR_LOCK     0x01

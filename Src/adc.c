@@ -21,7 +21,7 @@
 #include "adc.h"
 
 /* USER CODE BEGIN 0 */
-u32 AdcData=0;
+
 /* USER CODE END 0 */
 
 ADC_HandleTypeDef hadc1;
@@ -153,9 +153,13 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 } 
 
 /* USER CODE BEGIN 1 */
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* AdcHandle)
+u32 voltage=0;
+//电压值乘100.先计算上一次的转换结果再开始转换
+double Get_Battery_Voltage(void)
 {
-	AdcData=AdcData*330/4096-3;
+	double AdcData=(voltage*330-10000)/4096;
+	HAL_ADC_Start_DMA(&hadc1,&voltage,1);
+	return AdcData;
 }
 /* USER CODE END 1 */
 
