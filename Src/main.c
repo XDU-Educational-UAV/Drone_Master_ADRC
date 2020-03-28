@@ -150,11 +150,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		if(RCmsg & RC_RECEIVE)
+		if(GlobalStat & RC_RECEIVE)
 		{
 			RC_Processing();
-			Send_Data();
-			RCmsg&=~RC_RECEIVE;
+			RC_Data_Send();
+			GlobalStat&=~RC_RECEIVE;
 		}
 		if(TaskFlag & TASK_2ms)
 		{

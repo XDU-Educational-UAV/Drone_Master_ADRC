@@ -16,8 +16,8 @@ short PwmOut[4]={0,0,0,0};  //把值赋给定时器，输出PWM
 void Para_Init(void)
 {
 	MOTOR1=PwmOut[0];MOTOR2=PwmOut[1];MOTOR3=PwmOut[2];MOTOR4=PwmOut[3];
-	adrcRoll.KpOut=0;adrcRoll.KpIn=2;adrcRoll.KdIn=0.1;
-	adrcPitch.KpOut=0;adrcPitch.KpIn=2;adrcPitch.KdIn=0.1;
+	adrcRoll.KpOut=0;adrcRoll.KpIn=0.5;adrcRoll.KdIn=0;
+	adrcPitch.KpOut=0;adrcPitch.KpIn=0.5;adrcPitch.KdIn=0;
 }
 
 /**********************

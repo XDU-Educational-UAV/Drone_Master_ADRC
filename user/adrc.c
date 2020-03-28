@@ -4,8 +4,8 @@
 附加一个与自抗扰控制无关的误差四元数计算函数
 ********************************************/
 #define adrcR   4
-#define adrcH   0.025
-#define adrcD   0.0025
+#define adrcH   0.02  //>=T
+#define adrcD   0.0016  //H*H*R
 #define T       0.02
 
 /**********************

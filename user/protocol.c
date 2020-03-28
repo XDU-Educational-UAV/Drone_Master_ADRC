@@ -10,13 +10,9 @@
 
 /*串口接收部分**********************************/
 u8 RxData;  //从串口收到的一个字节
-u8 RxTemp[12];  //临时保存串口接收到的待用数据
 u8 FcnWord;  //功能字节(跨文件全局变量)
 u8 LenWord;  //长度字节(跨文件全局变量)
-u8 ErrCnt=0;  //未收到遥控器信号的次数(跨文件全局变量)
-//以下为遥控器数据保存
-short RCchannel[4];  //遥控器的4个控制通道(跨文件全局变量)
-u8 RCmsg=0;  //其余有关的遥控器命令(跨文件全局变量)
+u8 RxTemp[12];  //临时保存串口接收到的待用数据
 
 /***********************
 建立DMA接收通道,从地面站/遥控器接收数据
@@ -86,21 +82,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		return;
 	if(XDAA_Data_Receive_Precess())
 		return;
-	switch(FcnWord)
-	{
-	case P_STAT:
-		if(RxTemp[1]==WHO_AM_I)
-			RCmsg=RxTemp[0];
-		break;
-	case P_CTRL:
-		LenWord/=2;
-		for(u8 i=0;i<LenWord;i++)
-			RCchannel[i]=(RxTemp[2*i]<<8) | RxTemp[2*i+1];
-		break;
-	default:break;
-	}
-	ErrCnt=0;
-	RCmsg|=RC_RECEIVE;
+	GlobalStat|=RC_RECEIVE;
 }
 /*串口发送部分**********************************/
 u8 DataToSend[16];  //待发送的数据

@@ -7,6 +7,8 @@
 #include "adrc.h"
 #include "adc.h"
 
+#define WHO_AM_I       0x48
+
 #define MOTOR1        (TIM1->CCR3) 
 #define MOTOR2        (TIM1->CCR2)
 #define MOTOR3        (TIM1->CCR4)
@@ -21,20 +23,23 @@
 #define UNLOCKED      2    //解锁状态
 #define LOCK_TIME     20   //解锁时间,2秒
 //GlobalStat
-//#define MOTOR_LOCK    0X01
-#define FAIL_SAFE     0x80
+#define MOTOR_LOCK    0x01
+#define ROL_REQ       0x02
+#define PIT_REQ       0x04
+#define FAIL_SAFE     0x10
+#define RC_RECEIVE    0x80
 
 extern short RCdata[];  //被control.c调用
 extern AxisInt gyro;  //被control.c调用
 extern ADRC_Param adrcRoll,adrcPitch;  //被control.c调用
 extern Quaternion Qpos;  //被control.c调用
-extern u8 GlobalStat;  //被control.c调用
+extern u8 GlobalStat;  //被control.c,protocol.c调用
 
 //在task.c中
 void IMU_Processing(void);
 void RC_Processing(void);
 void RC_Monitor(void);
-void Send_Data(void);
+void RC_Data_Send(void);
 //在control.c中
 void Para_Init(void);
 void Motor_Iner_loop(void);

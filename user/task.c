@@ -14,6 +14,7 @@ AxisInt ogyro;  //三轴陀螺仪原始数据
 short RCdata[4];  //遥控器控制数据(跨文件全局变量)
 ADRC_Param adrcRoll,adrcPitch;  //自抗扰控制器参数(跨文件全局变量)
 u8 GlobalStat=0;  //全局状态(跨文件全局变量)
+u8 ErrCnt=0;  //未收到遥控器信号的次数(跨文件全局变量)
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -62,7 +63,9 @@ void RC_Processing(void)
 	switch(FcnWord)
 	{
 	case P_STAT:
-		if(RCmsg & MOTOR_LOCK)
+		if(RxTemp[1]!=WHO_AM_I)
+			break;
+		if(RxTemp[0] & MOTOR_LOCK)
 		{
 			if(RCdata[2]<=LOWSPEED)
 				GlobalStat|=MOTOR_LOCK;
@@ -71,11 +74,28 @@ void RC_Processing(void)
 			GlobalStat&=~MOTOR_LOCK;
 		break;
 	case P_CTRL:
-		RCdata[0]=RCchannel[0];
-		RCdata[1]=RCchannel[1];
-		RCdata[2]=RCchannel[2];
-		RCdata[3]=RCchannel[3];
+		RCdata[0]=(RxTemp[0]<<8) | RxTemp[1];
+		RCdata[1]=(RxTemp[2]<<8) | RxTemp[3];
+		RCdata[2]=(RxTemp[4]<<8) | RxTemp[5];
+		RCdata[3]=(RxTemp[6]<<8) | RxTemp[7];
 		break;
+	case P_REQ_CTRL:
+		if(RxTemp[0] & 0x01)
+			GlobalStat|=ROL_REQ;
+		if(RxTemp[0] & 0x02)
+			GlobalStat|=PIT_REQ;
+		break;
+	case P_ROL_CTRL:
+		adrcRoll.KpOut=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
+		adrcRoll.KpIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
+		adrcRoll.KdIn=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
+		GlobalStat|=ROL_REQ;
+		break;
+	case P_PIT_CTRL:
+		adrcPitch.KpOut=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
+		adrcPitch.KpIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
+		adrcPitch.KdIn=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
+		GlobalStat|=PIT_REQ;
 	default:break;
 	}
 	if((Qpos.q1>0.7)||(Qpos.q2>0.7))
@@ -96,32 +116,54 @@ void RC_Monitor(void)
 	}
 }
 
-void Send_Data(void)
+void RC_Data_Send(void)
 {
-	s16 data[6];
+	s16 sdata[6];
+	//发送传感器数据,可不发
+//	sdata[0]=acc.x;sdata[1]=acc.y;sdata[2]=acc.z;
+//	sdata[3]=gyro.x;sdata[4]=gyro.y;sdata[5]=gyro.z;
+//	XDAA_Send_S16_Data(sdata,6,P_SENSOR);
+	//发送遥控器数据,推荐发
+	XDAA_Send_S16_Data(RCdata,4,P_CTRL);
+	//发送姿态数据,可不发
+//	float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
+//	float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
+//	float yaw=Matan2(2*(Qpos.q1*Qpos.q2+Qpos.q0*Qpos.q3),1-2*(Qpos.q2*Qpos.q2+Qpos.q3*Qpos.q3))*57.3f;
+//	sdata[0]=(s16)(roll*100);
+//	sdata[1]=(s16)(pitch*100);
+//	sdata[2]=(s16)(yaw*100);
+//	XDAA_Send_S16_Data(sdata,3,P_ATTI);
+	//发送油门数据,可不发
+//	sdata[0]=MOTOR1;
+//	sdata[1]=MOTOR2;
+//	sdata[2]=MOTOR3;
+//	sdata[3]=MOTOR4;
+//	XDAA_Send_S16_Data(sdata,4,P_MOTOR);
+	//发送状态数据,推荐发
 	static u8 count=0;
-	u8 udata[2]={GlobalStat,(u8)Get_Battery_Voltage()};
-	data[0]=acc.x;data[1]=acc.y;data[2]=acc.z;
-	data[3]=gyro.x;data[4]=gyro.y;data[5]=gyro.z;
-//	XDAA_Send_S16_Data(data,6,P_SENSOR);  //可不发
-	XDAA_Send_S16_Data(RCdata,4,P_CTRL);  //必发
-	float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
-	float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
-	float yaw=Matan2(2*(Qpos.q1*Qpos.q2+Qpos.q0*Qpos.q3),1-2*(Qpos.q2*Qpos.q2+Qpos.q3*Qpos.q3))*57.3f;
-	data[0]=(s16)(roll*100);
-	data[1]=(s16)(pitch*100);
-	data[2]=(s16)(yaw*100);
-//	XDAA_Send_S16_Data(data,3,P_ATTI);  //可不发
-	data[0]=MOTOR1;
-	data[1]=MOTOR2;
-	data[2]=MOTOR3;
-	data[3]=MOTOR4;
-	XDAA_Send_S16_Data(data,4,P_MOTOR);  //可不发
 	count++;
+	u8 udata[2]={GlobalStat,(u8)Get_Battery_Voltage()};
 	if(count>=10)
 	{
-		XDAA_Send_U8_Data(udata,2,1);  //推荐发
+		XDAA_Send_U8_Data(udata,2,1);
 		count=0;
+	}
+	//应答上位机请求
+	if(GlobalStat & ROL_REQ)
+	{
+		sdata[0]=(s16)(adrcRoll.KpOut*1000);
+		sdata[1]=(s16)(adrcRoll.KpIn*1000);
+		sdata[2]=(s16)(adrcRoll.KdIn*1000);
+		XDAA_Send_S16_Data(sdata,3,P_ROL_CTRL);
+		GlobalStat &=~ ROL_REQ;
+	}	
+	if(GlobalStat & PIT_REQ)
+	{
+		sdata[0]=(s16)(adrcPitch.KpOut*1000);
+		sdata[1]=(s16)(adrcPitch.KpIn*1000);
+		sdata[2]=(s16)(adrcPitch.KdIn*1000);
+		XDAA_Send_S16_Data(sdata,3,P_PIT_CTRL);
+		GlobalStat &=~ PIT_REQ;
 	}
 	Total_Send();
 }
