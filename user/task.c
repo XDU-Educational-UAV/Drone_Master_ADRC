@@ -14,7 +14,9 @@ AxisInt ogyro;  //三轴陀螺仪原始数据
 short RCdata[4];  //遥控器控制数据(跨文件全局变量)
 ADRC_Param adrcRoll,adrcPitch;  //自抗扰控制器参数(跨文件全局变量)
 u8 GlobalStat=0;  //全局状态(跨文件全局变量)
+u8 ReqMsg=0;  //上位机的其余指令(跨文件全局变量)
 u8 ErrCnt=0;  //未收到遥控器信号的次数(跨文件全局变量)
+float gx,gy;
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -36,6 +38,8 @@ void IMU_Processing(void)
 	Acc_Calibrate(&acc);
 	GYRO_Calibrate(&gyro);
 	IMUupdate(acc,&gyro,&Qpos);
+	gx=GyroToDeg(gyro.x);  //
+	gy=GyroToDeg(gyro.y);  //
 }
 
 /***********************
@@ -80,22 +84,19 @@ void RC_Processing(void)
 		RCdata[3]=(RxTemp[6]<<8) | RxTemp[7];
 		break;
 	case P_REQ_CTRL:
-		if(RxTemp[0] & 0x01)
-			GlobalStat|=ROL_REQ;
-		if(RxTemp[0] & 0x02)
-			GlobalStat|=PIT_REQ;
+		ReqMsg=RxTemp[0];
 		break;
 	case P_ROL_CTRL:
 		adrcRoll.KpOut=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrcRoll.KpIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrcRoll.KdIn=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		GlobalStat|=ROL_REQ;
+		ReqMsg|=REQ_ROL_CTRL;
 		break;
 	case P_PIT_CTRL:
 		adrcPitch.KpOut=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrcPitch.KpIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrcPitch.KdIn=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		GlobalStat|=PIT_REQ;
+		ReqMsg|=REQ_PIT_CTRL;
 	default:break;
 	}
 	if((Qpos.q1>0.7)||(Qpos.q2>0.7))
@@ -149,21 +150,37 @@ void RC_Data_Send(void)
 		count=0;
 	}
 	//应答上位机请求
-	if(GlobalStat & ROL_REQ)
+	if(ReqMsg & REQ_ROL_CTRL)
 	{
 		sdata[0]=(s16)(adrcRoll.KpOut*1000);
 		sdata[1]=(s16)(adrcRoll.KpIn*1000);
 		sdata[2]=(s16)(adrcRoll.KdIn*1000);
 		XDAA_Send_S16_Data(sdata,3,P_ROL_CTRL);
-		GlobalStat &=~ ROL_REQ;
+		ReqMsg &=~ REQ_ROL_CTRL;
 	}	
-	if(GlobalStat & PIT_REQ)
+	if(ReqMsg & REQ_PIT_CTRL)
 	{
 		sdata[0]=(s16)(adrcPitch.KpOut*1000);
 		sdata[1]=(s16)(adrcPitch.KpIn*1000);
 		sdata[2]=(s16)(adrcPitch.KdIn*1000);
 		XDAA_Send_S16_Data(sdata,3,P_PIT_CTRL);
-		GlobalStat &=~ PIT_REQ;
+		ReqMsg &=~ REQ_PIT_CTRL;
+	}
+	if(ReqMsg & REQ_ROL_STAT)
+	{
+		sdata[0]=(s16)(gx*100);
+		sdata[1]=(s16)(adrcRoll.gEst*100);
+		sdata[2]=(s16)(adrcRoll.AccEst*100);
+		XDAA_Send_S16_Data(sdata,3,P_ROL_STAT);
+		ReqMsg &=~ REQ_ROL_CTRL;
+	}	
+	if(ReqMsg & REQ_PIT_STAT)
+	{
+		sdata[0]=(s16)(gy*100);
+		sdata[1]=(s16)(adrcPitch.gEst*100);
+		sdata[2]=(s16)(adrcPitch.AccEst*100);
+		XDAA_Send_S16_Data(sdata,3,P_PIT_STAT);
+		ReqMsg &=~ REQ_PIT_CTRL;
 	}
 	Total_Send();
 }

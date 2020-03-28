@@ -16,6 +16,15 @@
 #define P_ROL_STAT     0xA2  //ROL状态
 #define P_PIT_CTRL     0xA3  //PIT参数
 #define P_PIT_STAT     0xA4  //PIT状态
+//GlobalStat
+#define MOTOR_LOCK     0x01
+#define FAIL_SAFE      0x10
+#define RC_RECEIVE     0x80
+//ReqMsg
+#define REQ_ROL_CTRL   0x01
+#define REQ_ROL_STAT   0x02
+#define REQ_PIT_CTRL   0x04
+#define REQ_PIT_STAT   0x08
 
 extern u8 FcnWord;  //被task.c调用
 extern u8 LenWord;  //被task.c调用

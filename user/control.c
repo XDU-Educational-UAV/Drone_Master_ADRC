@@ -41,8 +41,6 @@ void Motor_Iner_loop(void)
 		MOTOR4=LOWSPEED;
 		return;
 	}
-	float gx=GyroToDeg(gyro.x);
-	float gy=GyroToDeg(gyro.y);
 	ADRC_LESO(adrcRoll.u,gx,1,&adrcRoll.gEst,&adrcRoll.AccEst,&adrcRoll.w);
 	ADRC_LESO(adrcPitch.u,gy,1,&adrcPitch.gEst,&adrcPitch.AccEst,&adrcPitch.w);
 	adrcRoll.u=adrcRoll.PosOut-adrcRoll.KpIn*gx-adrcRoll.KdIn*adrcRoll.AccEst;
