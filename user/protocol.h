@@ -2,7 +2,6 @@
 #define __NIMING_H
 
 #include "usart.h"
-#include "task.h"
 
 #define SENDBUF_SIZE   128
 //FcnWord
@@ -29,6 +28,7 @@
 extern u8 FcnWord;  //被task.c调用
 extern u8 LenWord;  //被task.c调用
 extern u8 RxTemp[12];  //被task.c调用
+extern u8 GlobalStat;  //被control.c,task.c调用
 
 void Protocol_Init(void);
 void XDAA_Send_S16_Data(s16 *data,u8 len,u8 fcn);

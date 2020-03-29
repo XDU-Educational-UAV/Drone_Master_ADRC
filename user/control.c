@@ -16,8 +16,8 @@ short PwmOut[4]={0,0,0,0};  //把值赋给定时器，输出PWM
 void Para_Init(void)
 {
 	MOTOR1=PwmOut[0];MOTOR2=PwmOut[1];MOTOR3=PwmOut[2];MOTOR4=PwmOut[3];
-	adrcRoll.KpOut=0;adrcRoll.KpIn=0.5;adrcRoll.KdIn=0;
-	adrcPitch.KpOut=0;adrcPitch.KpIn=0.5;adrcPitch.KdIn=0;
+	adrR.A=1;adrR.B=1;adrR.KpIn=0.5;adrR.KdIn=0;
+	adrP.A=1;adrP.B=1;adrP.KpIn=0.5;adrP.KdIn=0;
 }
 
 /**********************
@@ -41,14 +41,14 @@ void Motor_Iner_loop(void)
 		MOTOR4=LOWSPEED;
 		return;
 	}
-	ADRC_LESO(adrcRoll.u,gx,1,&adrcRoll.gEst,&adrcRoll.AccEst,&adrcRoll.w);
-	ADRC_LESO(adrcPitch.u,gy,1,&adrcPitch.gEst,&adrcPitch.AccEst,&adrcPitch.w);
-	adrcRoll.u=adrcRoll.PosOut-adrcRoll.KpIn*gx-adrcRoll.KdIn*adrcRoll.AccEst;
-	adrcPitch.u=adrcPitch.PosOut-adrcPitch.KpIn*gy-adrcPitch.KdIn*adrcPitch.AccEst;
-	PwmOut[0]=RCdata[2]+DegToPwm(-adrcRoll.u-adrcPitch.u);
-	PwmOut[1]=RCdata[2]+DegToPwm(-adrcRoll.u+adrcPitch.u);
-	PwmOut[2]=RCdata[2]+DegToPwm(+adrcRoll.u+adrcPitch.u);
-	PwmOut[3]=RCdata[2]+DegToPwm(+adrcRoll.u-adrcPitch.u);
+	ADRC_LESO(adrR.u,gx,adrR.A,adrR.B,&adrR.gEst,&adrR.AccEst,&adrR.w);
+	ADRC_LESO(adrP.u,gy,adrP.A,adrP.B,&adrP.gEst,&adrP.AccEst,&adrP.w);
+	adrR.u=adrR.PosOut-adrR.KpIn*gx-adrR.KdIn*adrR.AccEst;
+	adrP.u=adrP.PosOut-adrP.KpIn*gy-adrP.KdIn*adrP.AccEst;
+	PwmOut[0]=RCdata[2]+DegToPwm(-adrR.u-adrP.u);
+	PwmOut[1]=RCdata[2]+DegToPwm(-adrR.u+adrP.u);
+	PwmOut[2]=RCdata[2]+DegToPwm(+adrR.u+adrP.u);
+	PwmOut[3]=RCdata[2]+DegToPwm(+adrR.u-adrP.u);
 	MOTOR1=LIMIT(PwmOut[0],LOWSPEED,1000);
 	MOTOR2=LIMIT(PwmOut[1],LOWSPEED,1000);
 	MOTOR3=LIMIT(PwmOut[2],LOWSPEED,1000);
@@ -62,8 +62,8 @@ void Motor_Iner_loop(void)
 void Motor_Outer_loop(void)
 {
 #ifdef SPEED
-	adrcRoll.PosOut=PwmToDegAdd(RCdata[0]);
-	adrcPitch.PosOut=PwmToDegAdd(RCdata[1]);
+	adrR.PosOut=PwmToDegAdd(RCdata[0]);
+	adrP.PosOut=PwmToDegAdd(RCdata[1]);
 #else
 	Quaternion Qexp;
 	float Hroll=PwmToRadAdd(RCdata[0])/2;
@@ -74,7 +74,7 @@ void Motor_Outer_loop(void)
 	Qexp.q2=Mcos(Hroll)*Msin(Hpitch)*Mcos(Hyaw)+Msin(Hroll)*Mcos(Hpitch)*Msin(Hyaw);
 	Qexp.q3=Mcos(Hroll)*Mcos(Hpitch)*Msin(Hyaw)-Msin(Hroll)*Msin(Hpitch)*Mcos(Hyaw);
 	Quaternion Qerr=Quaternion_Error(Qexp,Qpos);
-	adrcRoll.PosOut=adrcRoll.KpOut*RadToDeg(Masin(Qerr.q1));
-	adrcPitch.PosOut=adrcPitch.KpOut*RadToDeg(Masin(Qerr.q2));
+	adrR.PosOut=adrR.KpOut*RadToDeg(Masin(Qerr.q1));
+	adrP.PosOut=adrP.KpOut*RadToDeg(Masin(Qerr.q2));
 #endif
 }

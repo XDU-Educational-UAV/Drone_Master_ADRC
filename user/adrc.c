@@ -83,12 +83,12 @@ x1'=x2;x2'=-x2+bu+w;
 *@z2:角加速度x2的估计值(输入时应有初始值)
 *@w:总扰动(输入时应有初始值)
 **********************/
-void ADRC_LESO(float u,float y,float b,float *z1,float *z2,float *w)
+void ADRC_LESO(float u,float y,float a,float b,float *z1,float *z2,float *w)
 {
 	float e=y-*z1;
-	*z1+=(*z2+6*e)*T;
-	*z2+=(-1**z2+b*u+*w+12*e)*T;
-	*w+=8*e*T;
+	*z1+=(*z2+15.0f*e)*T;
+	*z2+=(-a**z2+b*u+*w+75.0f*e)*T;
+	*w+=125.0f*e*T;
 }
 
 /**********************

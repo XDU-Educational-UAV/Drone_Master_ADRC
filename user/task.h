@@ -25,9 +25,8 @@
 
 extern short RCdata[];  //被control.c调用
 extern AxisInt gyro;  //被control.c调用
-extern ADRC_Param adrcRoll,adrcPitch;  //被control.c调用
+extern ADRC_Param adrR,adrP;  //被control.c调用
 extern Quaternion Qpos;  //被control.c调用
-extern u8 GlobalStat;  //被control.c,protocol.c调用
 extern float gx,gy;
 
 //在task.c中

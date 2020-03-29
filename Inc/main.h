@@ -37,7 +37,14 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+#define LED1_PORT  GPIOB->ODR
+#define LED2_PORT  GPIOB->ODR
+#define LED3_PORT  GPIOC->ODR
+#define LED4_PORT  GPIOA->ODR
+#define LED1_PIN   0x20
+#define LED2_PIN   0x10
+#define LED3_PIN   0x40
+#define LED4_PIN   0x200
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
