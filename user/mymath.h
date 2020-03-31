@@ -9,6 +9,7 @@
 #define Mcos(rad)                Msin(PI/2-ABS(rad))
 #define MIN(a,b)                 ((a)<(b)?(a):(b))
 #define MAX(a,b)                 ((a)>(b)?(a):(b))
+#define Mln(x)                   (6*((x)-1)/((x)+1+4*Msqrt(x)))
 
 typedef struct
 {
@@ -21,6 +22,6 @@ float Msqrt(float number);
 float Q_rsqrt(float number);
 float Masin(float x);
 float Msin(float rad);
-float Mpow(float num, float m);
+float Mexp(float x);
 
 #endif

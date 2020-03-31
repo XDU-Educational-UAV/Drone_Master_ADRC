@@ -4,12 +4,12 @@
 附加一个与自抗扰控制无关的误差四元数计算函数
 ********************************************/
 #define adrcR   4
-#define adrcH   0.025
-#define adrcD   0.0025
+#define adrcH   0.02  //>=T
+#define adrcD   0.0016  //H*H*R
 #define T       0.02
 
 /**********************
-离散系统最速控制综合函数(bug)
+离散系统最速控制综合函数
 *@x1:二阶积分器的输出
 *@x2:二阶积分器输出的微分
 *@return:控制量输出
@@ -32,7 +32,7 @@ float ADRC_fhan(float x1, float x2)
 }
 
 /**********************
-跟踪微分器(bug)
+跟踪微分器
 *@u:输入
 *@derivative:原信号的微分输出
 *@return:原信号的滤波输出
@@ -48,7 +48,7 @@ float ADRC_TD(float r,float *derivative)
 }
 
 /**********************
-非线性增益(bug)
+非线性增益
 **********************/
 float ADRC_fal(float x)
 {
@@ -81,16 +81,14 @@ x1'=x2;x2'=-x2+bu+w;
 *@b:输入信号增益
 *@z1:角速度x1的估计值(输入时应有初始值)
 *@z2:角加速度x2的估计值(输入时应有初始值)
-*@return:总扰动w
+*@w:总扰动(输入时应有初始值)
 **********************/
-float ADRC_LESO(float u,float y,float b,float *z1,float *z2)
+void ADRC_LESO(float u,float y,float a,float b,float *z1,float *z2,float *w)
 {
-	static float w=0;
 	float e=y-*z1;
-	*z1+=(*z2+6*e)*T;
-	*z2+=(-1**z2+b*u+w+12*e)*T;
-	w+=8*e*T;
-	return w;
+	*z1+=(*z2+15.0f*e)*T;
+	*z2+=(-a**z2+b*u+*w+75.0f*e)*T;
+	*w+=125.0f*e*T;
 }
 
 /**********************

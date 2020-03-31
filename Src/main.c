@@ -145,16 +145,19 @@ int main(void)
 	while(MPU_Init()){};
 	Protocol_Init();
 	Para_Init();
+	LED1_PORT|=LED1_PIN;
+	LED3_PORT|=LED3_PIN;
+	LED4_PORT|=LED4_PIN;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		if(RCmsg & RC_RECEIVE)
+		if(GlobalStat & RC_RECEIVE)
 		{
 			RC_Processing();
-			Send_Data();
-			RCmsg&=~RC_RECEIVE;
+			RC_Data_Send();
+			GlobalStat&=~RC_RECEIVE;
 		}
 		if(TaskFlag & TASK_2ms)
 		{
@@ -174,14 +177,11 @@ int main(void)
 		}
 		if(TaskFlag & TASK_500ms)
 		{
-			GPIOC->ODR^=0x40;
-			GPIOA->ODR^=0x200;
+			LED2_PORT^=LED2_PIN;
 			TaskFlag&=~TASK_500ms;
 		}
 		if(TaskFlag & TASK_1s)
 		{
-			GPIOB->ODR^=0x30;
-			ADC_Convert();
 			TaskFlag&=~TASK_1s;
 		}
 	}
