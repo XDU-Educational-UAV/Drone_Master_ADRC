@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32G030xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;     ../Drivers/STM32G0xx_HAL_Driver/Inc;     ../Drivers/STM32G0xx_HAL_Driver/Inc/Legacy;     ../Drivers/CMSIS/Device/ST/STM32G0xx/Include;     ../Drivers/CMSIS/Include;     ..\user</IncludePath>
+              <IncludePath>../Inc;        ../Drivers/STM32G0xx_HAL_Driver/Inc;        ../Drivers/STM32G0xx_HAL_Driver/Inc/Legacy;        ../Drivers/CMSIS/Device/ST/STM32G0xx/Include;        ../Drivers/CMSIS/Include;        ..\user</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -568,11 +568,6 @@
               <FilePath>..\user\mpuiic.c</FilePath>
             </File>
             <File>
-              <FileName>adrc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\adrc.c</FilePath>
-            </File>
-            <File>
               <FileName>control.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\user\control.c</FilePath>
@@ -591,6 +586,11 @@
               <FileName>mymath.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\user\mymath.c</FilePath>
+            </File>
+            <File>
+              <FileName>adrc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\adrc.c</FilePath>
             </File>
           </Files>
         </Group>

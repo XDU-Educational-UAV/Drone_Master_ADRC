@@ -16,21 +16,6 @@ const float accB[3]={-4644,-4102,1700};
 float gyroB[3]={50,10,50};
 
 /***********************
-二阶IIR低通滤波，直接II型结构
-*@delay:需要暂存3个状态变量的存储空间
-*@DataIn:每次新增的数据
-输出滤波后的新增数据
-**********************/
-float IIR_LowPassFilter(float DataIn,float *delay)
-{
-	delay[0] = DataIn + 0.76295*delay[1] - 0.283438*delay[2];
-	float DataOut = 0.129*delay[0] + 0.258*delay[1] + 0.129*delay[2];
-	delay[2] = delay[1];
-	delay[1] = delay[0];
-	return DataOut;
-}
-
-/***********************
 用事先确定的校准参数校正加速度计原始数据
 **********************/
 void Acc_Calibrate(AxisInt *acc)

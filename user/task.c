@@ -101,16 +101,20 @@ void RC_Processing(void)
 	default:break;
 	}
 	if((Qpos.q1>0.7)||(Qpos.q2>0.7))
-		Fail_Safe();
+	Fail_Safe();
 }
 
 /***********************
-定时监测是否收到遥控器信号
+定时监测蓝牙是否配对以及是否收到遥控器信号
 *@period:100ms
 **********************/
 void RC_Monitor(void)
 {
 	ErrCnt++;
+	if(STAT_PORT & STAT_Pin)
+		LED3_PORT |= LED3_Pin;
+	else
+		LED3_PORT &=~ LED3_Pin;
 	if(ErrCnt>=ERR_TIME)
 	{
 		Fail_Safe();
@@ -120,27 +124,28 @@ void RC_Monitor(void)
 
 void RC_Data_Send(void)
 {
+	ErrCnt=0;
 	s16 sdata[6];
 	//发送传感器数据,可不发
-//	sdata[0]=acc.x;sdata[1]=acc.y;sdata[2]=acc.z;
-//	sdata[3]=gyro.x;sdata[4]=gyro.y;sdata[5]=gyro.z;
-//	XDAA_Send_S16_Data(sdata,6,P_SENSOR);
+	sdata[0]=acc.x;sdata[1]=acc.y;sdata[2]=acc.z;
+	sdata[3]=gyro.x;sdata[4]=gyro.y;sdata[5]=gyro.z;
+	XDAA_Send_S16_Data(sdata,6,P_SENSOR);
 	//发送遥控器数据,推荐发
 	XDAA_Send_S16_Data(RCdata,4,P_CTRL);
 	//发送姿态数据,可不发
-//	float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
-//	float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
-//	float yaw=Matan2(2*(Qpos.q1*Qpos.q2+Qpos.q0*Qpos.q3),1-2*(Qpos.q2*Qpos.q2+Qpos.q3*Qpos.q3))*57.3f;
-//	sdata[0]=(s16)(roll*100);
-//	sdata[1]=(s16)(pitch*100);
-//	sdata[2]=(s16)(yaw*100);
-//	XDAA_Send_S16_Data(sdata,3,P_ATTI);
+	float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
+	float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
+	float yaw=Matan2(2*(Qpos.q1*Qpos.q2+Qpos.q0*Qpos.q3),1-2*(Qpos.q2*Qpos.q2+Qpos.q3*Qpos.q3))*57.3f;
+	sdata[0]=(s16)(roll*100);
+	sdata[1]=(s16)(pitch*100);
+	sdata[2]=(s16)(yaw*100);
+	XDAA_Send_S16_Data(sdata,3,P_ATTI);
 	//发送油门数据,可不发
-//	sdata[0]=MOTOR1;
-//	sdata[1]=MOTOR2;
-//	sdata[2]=MOTOR3;
-//	sdata[3]=MOTOR4;
-//	XDAA_Send_S16_Data(sdata,4,P_MOTOR);
+	sdata[0]=MOTOR1;
+	sdata[1]=MOTOR2;
+	sdata[2]=MOTOR3;
+	sdata[3]=MOTOR4;
+	XDAA_Send_S16_Data(sdata,4,P_MOTOR);
 	//发送状态数据,推荐发
 	static u8 count=0;
 	count++;
@@ -171,18 +176,20 @@ void RC_Data_Send(void)
 	}
 	if(ReqMsg & REQ_ROL_STAT)
 	{
-		sdata[0]=(s16)(gx*100);
+		sdata[0]=(s16)(adrR.SpeEst*100);
 		sdata[1]=(s16)(adrR.u*100);
-		sdata[2]=(s16)((adrR.gEst-gx)*100);
-		XDAA_Send_S16_Data(sdata,3,P_ROL_STAT);
+		sdata[2]=(s16)((gx-adrR.SpeEst)*100);
+		sdata[3]=(s16)(adrR.AccEst*100);
+		XDAA_Send_S16_Data(sdata,4,P_ROL_STAT);
 		ReqMsg &=~ REQ_ROL_STAT;
 	}
 	if(ReqMsg & REQ_PIT_STAT)
 	{
-		sdata[0]=(s16)(gy*100);
+		sdata[0]=(s16)(adrP.SpeEst*100);
 		sdata[1]=(s16)(adrP.u*100);
-		sdata[2]=(s16)(adrP.gEst*100);
-		XDAA_Send_S16_Data(sdata,3,P_PIT_STAT);
+		sdata[2]=(s16)((gy-adrP.SpeEst)*1000);
+		sdata[3]=(s16)(adrP.AccEst*100);
+		XDAA_Send_S16_Data(sdata,4,P_PIT_STAT);
 		ReqMsg &=~ REQ_PIT_STAT;
 	}
 	Total_Send();

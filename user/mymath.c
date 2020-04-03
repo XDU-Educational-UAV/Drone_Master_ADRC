@@ -3,12 +3,22 @@
 常用初等函数的快速算法
 与库函数冲突的函数加前缀"M"
 函数目录(括号内为定义域和值域):
-Msin(x)     ([-pi/2,pi/2],[-1,1]);
-Mcos(x)     ([-pi/2,pi/2],[-1,1]);
-Matan(x)    ((-∞,∞),(-pi/2,pi/2));
-Matan2(y,x) ((-∞,∞),(-pi/2,pi/2));
-Masin(x)    ([-1,1],[-pi/2,pi/2]);
-Msqrt,Q_rsqrt,Mpow,ABS,SIGN,MIN,MAX,SAT
+正弦函数      Msin(x)     [-pi/2,pi/2]    [-1,1]
+余弦函数      Mcos(x)     [-pi/2,pi/2]    [-1,1]
+反正切函数1   Matan(x)    (-∞,∞)          (-pi/2,pi/2)
+反正切函数2   Matan2(y,x) (-∞,∞)          (-pi/2,pi/2)
+反正弦函数    Masin(x)    [-1,1]          [-pi/2,pi/2]
+平方根函数    Msqrt       [0,∞)           [0,∞)
+平方根倒数    Q_rsqrt     (0,∞)           (0,∞)
+自然指数函数  Mexp        (-∞,∞)          (0,∞)
+自然对数函数  Mln         (0,∞)           (-∞,∞)
+绝对值        ABS
+符号          SIGN
+较小值        MIN
+较大值        MAX
+饱和          SAT
+--------滤波器---------
+低通滤波器    IIR_LowPassFilter
 ********************************************/
 
 //反正切函数.定义域(-∞,∞),值域(-pi/2,pi/2)
@@ -16,16 +26,16 @@ float Matan(float rad)
 {
 	if (rad < 0)
 		return -Matan(-rad);
-	if (rad <= 0.25)
+	if (rad <= 0.25f)
 	{
 		float ans = rad*(0.47831170583472860f * rad - 1.1679191357523431f);
 		return ans*(0.29922976727874773f * ans - 0.85630501107017942f);
 	}
-	if (rad <= 0.75)
-		return 0.463647609f + Matan((rad - 0.5) / (1 + rad*0.5));
-	if (rad <= 2)
-		return 0.8760580506f + Matan((rad - 1.2) / (1 + rad*1.2));
-	return 1.3258186637f + Matan((rad - 4) / (1 + rad * 4));
+	if (rad <= 0.75f)
+		return 0.463647609f + Matan((rad - 0.5f) / (1.0f + rad*0.5f));
+	if (rad <= 2.0f)
+		return 0.8760580506f + Matan((rad - 1.2f) / (1.0f + rad*1.2f));
+	return 1.3258186637f + Matan((rad - 4.0f) / (1.0f + rad * 4.0f));
 }
 
 //360°反正切.定义域(-∞,∞),值域(-pi,pi]
@@ -43,7 +53,7 @@ float Msqrt(float number)
 {
 	long i;
 	float x, y;
-	x = number * 0.5F;
+	x = number * 0.5f;
 	y = number;
 	i = *(long *)&y;
 	i = 0x5f3759df - (i >> 1);
@@ -58,7 +68,7 @@ float Q_rsqrt(float number)
 {
 	long i;
 	float x2, y;
-	x2 = number * 0.5F;
+	x2 = number * 0.5f;
 	y  = number;
 	i  = * ( long * ) &y;
 	i  = 0x5f3759df - ( i >> 1 );
@@ -73,11 +83,11 @@ float Masin(float x)
 {
 	if(x<0)
 		return -Masin(-x);
-	else if(x<1)
-		return Matan(x*Q_rsqrt(1-x*x));
+	else if(x<1.0f)
+		return Matan(x*Q_rsqrt(1.0f-x*x));
 	else
 	{
-		x=PI/2;
+		x=PI/2.0f;
 		return x;
 	}
 }
@@ -87,7 +97,7 @@ float Msin(float rad)
 {
 	float ans;
 	ans = rad*(1.27323954f - 0.405284735f * ABS(rad));
-	ans = ans*(0.775 + 0.225*ABS(ans));
+	ans = ans*(0.775f + 0.225f*ABS(ans));
 	return ans;
 }
 
@@ -96,4 +106,37 @@ float Mexp(float x)
 {
 	long i = (long)(x * 12102203 + 1064872507);
 	return *(float*)&i;
+}
+
+/***********************
+二阶IIR低通滤波，直接II型结构
+*@delay:需要暂存3个状态变量的存储空间
+*@DataIn:每次新增的数据
+输出滤波后的新增数据
+**********************/
+float IIR_LowPassFilter(float DataIn,float *delay)
+{
+	delay[0] = DataIn + 0.76295f*delay[1] - 0.283438f*delay[2];
+	float DataOut = 0.129f*delay[0] + 0.258f*delay[1] + 0.129f*delay[2];
+	delay[2] = delay[1];
+	delay[1] = delay[0];
+	return DataOut;
+}
+
+/***********************
+二阶IIR带阻滤波，直接II型结构
+*@delay:需要暂存3个状态变量的存储空间
+*@DataIn:每次新增的数据
+*@theta:阻带中心频率
+*@depth:陷波深度
+输出滤波后的新增数据
+**********************/
+float IIR_BandStopFilter(float DataIn,float *delay,float theta,float depth)
+{
+	delay[0]=DataIn+0.8f*delay[1]-0.32f*delay[2];
+	float DataOut=delay[0]-2*depth*Mcos(theta)*delay[1]+depth*depth*delay[2];
+	float k=0.52f/(1.0f+depth*depth-2*depth*Mcos(theta));
+	delay[2] = delay[1];
+	delay[1] = delay[0];
+	return DataOut*k;
 }
