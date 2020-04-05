@@ -17,13 +17,24 @@
 #define P_PIT_STAT     0xA4  //PIT状态
 //GlobalStat
 #define MOTOR_LOCK     0x01
+#define ACC_CALI       0x02
+#define GYRO_CALI      0x04
 #define FAIL_SAFE      0x10
-#define RC_RECEIVE     0x80
-//ReqMsg
+#define RC_RECEIVE     0xE0
+#define RC_RCV_CNT     0x20
+//ReqMsg1
+#define REQ_STAT   0x01
+#define REQ_ATTI   0x02
+#define REQ_SENSOR 0x04
+#define REQ_RC     0x08
+#define REQ_MOTOR  0x10
+//ReqMsg2
 #define REQ_ROL_CTRL   0x01
 #define REQ_ROL_STAT   0x02
 #define REQ_PIT_CTRL   0x04
 #define REQ_PIT_STAT   0x08
+#define REQ_ACC_CALI   0x10
+#define REQ_GYRO_CALI  0x20
 
 extern u8 FcnWord;  //被task.c调用
 extern u8 LenWord;  //被task.c调用

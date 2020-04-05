@@ -156,7 +156,8 @@ int main(void)
 		if(GlobalStat & RC_RECEIVE)
 		{
 			RC_Processing();
-			GlobalStat&=~RC_RECEIVE;
+			RC_Data_Send();
+			GlobalStat-=RC_RCV_CNT;
 		}
 		if(TaskFlag & TASK_2ms)
 		{
@@ -171,7 +172,6 @@ int main(void)
 		}
 		if(TaskFlag & TASK_100ms)
 		{
-			RC_Data_Send();
 			RC_Monitor();
 			TaskFlag&=~TASK_100ms;
 		}

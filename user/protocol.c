@@ -83,7 +83,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		return;
 	if(XDAA_Data_Receive_Precess())
 		return;
-	GlobalStat|=RC_RECEIVE;
+	GlobalStat+=RC_RCV_CNT;
 }
 /*串口发送部分**********************************/
 u8 DataToSend[16];  //待发送的数据
