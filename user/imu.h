@@ -29,6 +29,6 @@ void Acc_Correct(AxisInt *acc);
 void Gyro_Correct(AxisInt *gyro);
 u8 Acc_Calibrate(AxisInt acc);
 u8 Gyro_Calibrate(AxisInt gyro);
-void IMUupdate(AxisInt acc,AxisInt *gyro,Quaternion *Q);
+void IMUupdate(AxisInt acc,AxisInt gyro,Quaternion *Q);
 
 #endif

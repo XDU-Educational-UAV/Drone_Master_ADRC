@@ -14,6 +14,7 @@ u8 FcnWord;  //功能字节(跨文件全局变量)
 u8 LenWord;  //长度字节(跨文件全局变量)
 u8 RxTemp[12];  //临时保存串口接收到的待用数据(跨文件全局变量)
 u8 GlobalStat=0;  //全局状态(跨文件全局变量)
+u8 RcvCnt=0;  //待处理的数据帧个数(跨文件全局变量)
 
 /***********************
 建立DMA接收通道,从地面站/遥控器接收数据
@@ -79,32 +80,36 @@ u8 XDAA_Data_Receive_Precess(void)
 **********************/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if(huart->Instance!=USART2)
-		return;
-	if(XDAA_Data_Receive_Precess())
-		return;
-	GlobalStat+=RC_RCV_CNT;
+	if(huart->Instance!=USART2) return;
+	if(XDAA_Data_Receive_Precess()) return;
+	RcvCnt++;
 }
+
+
 /*串口发送部分**********************************/
 u8 DataToSend[16];  //待发送的数据
 u8 SendBuff[SENDBUF_SIZE];  //发送缓冲区
+u8 SendBuff2[SENDBUF_SIZE];  //发送缓冲区2
 u16 TotalLen=0;  //发送缓冲区待发送数据长度
+/***********************
+串口通过DMA方式接收到一个字节
+**********************/
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart->Instance!=USART2)	return;
+	GlobalStat&=~TX_BUSY;
+	TotalLen=0;
+}
 /***********************
 将待发送数据存入缓冲
 **********************/
 void DMA_Stuff(u8 *Data,u8 len)
 {
-	if(len==0)
-	{
-		TotalLen=0;
-		return;
-	}
-	u8 i;
-	for(i=0;i<len;i++)
+	for(u8 i=0;i<len;i++)
 	{
 		if(TotalLen+i>=SENDBUF_SIZE)
-			return;//若发送速率不够快导致缓冲区满则放弃新的数据
-		SendBuff[TotalLen+i]=Data[i];
+			return;  //若发送速率不够快导致缓冲区满则放弃新的数据
+		SendBuff2[TotalLen+i]=Data[i];
 	}
 	TotalLen+=len;
 }
@@ -113,10 +118,12 @@ void DMA_Stuff(u8 *Data,u8 len)
 **********************/
 void Total_Send(void)
 {
-	if(TotalLen==0)
-		return;
+	if(TotalLen==0)	return;
+	if(GlobalStat & TX_BUSY) return;
+	for(u8 i=0;i<TotalLen;i++)
+		SendBuff[i]=SendBuff2[i];
 	HAL_UART_Transmit_DMA(&huart2,SendBuff,TotalLen);
-	DMA_Stuff(0,0);
+	GlobalStat|=TX_BUSY;
 }
 /***********************
 *@data:s16型数据

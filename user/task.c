@@ -37,9 +37,9 @@ void IMU_Processing(void)
 	gyro.z=IIR_LowPassFilter(ogyro.z,IIRgz);
 	Acc_Correct(&acc);
 	Gyro_Correct(&gyro);
-	IMUupdate(acc,&gyro,&Qpos);
-	gx=GyroToDeg(gyro.x);  //
-	gy=GyroToDeg(gyro.y);  //
+	gx=GyroToDeg(gyro.x);
+	gy=GyroToDeg(gyro.y);
+	IMUupdate(acc,gyro,&Qpos);
 	if(GlobalStat & ACC_CALI)
 		if(!Acc_Calibrate(acc))
 			GlobalStat &=~ ACC_CALI;
@@ -92,6 +92,10 @@ void RC_Processing(void)
 	case P_REQ_CTRL:
 		ReqMsg1=RxTemp[0];
 		ReqMsg2=RxTemp[1];
+		if((ReqMsg1 & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_SPEED)
+			GlobalStat|=SPEED_MODE;
+		else if((ReqMsg1 & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_ATTI)
+			GlobalStat&=~SPEED_MODE;
 		if(ReqMsg2 & REQ_ACC_CALI)
 			GlobalStat|=ACC_CALI;
 		if(ReqMsg2 & REQ_GYRO_CALI)
@@ -117,16 +121,12 @@ void RC_Processing(void)
 }
 
 /***********************
-定时监测蓝牙是否配对以及是否收到遥控器信号
+定时是否收到遥控器信号
 *@period:100ms
 **********************/
 void RC_Monitor(void)
 {
 	ErrCnt++;
-	if(STAT_PORT & STAT_Pin)
-		LED3_PORT |= LED3_Pin;
-	else
-		LED3_PORT &=~ LED3_Pin;
 	if(ErrCnt>=ERR_TIME)
 	{
 		Fail_Safe();
@@ -141,14 +141,8 @@ void RC_Data_Send(void)
 	//上位机请求1
 	if(ReqMsg1 & REQ_STAT)
 	{
-		static u8 count=0;
-		count++;
 		u8 udata[2]={GlobalStat,(u8)Get_Battery_Voltage()};
-		if(count>=10)
-		{
-			XDAA_Send_U8_Data(udata,2,1);
-			count=0;
-		}
+		XDAA_Send_U8_Data(udata,2,1);
 		ReqMsg1 &=~ REQ_STAT;
 	}
 	if(ReqMsg1 & REQ_ATTI)
@@ -188,17 +182,17 @@ void RC_Data_Send(void)
 	{
 		sdata[0]=(s16)(adrR.KpIn*1000);
 		sdata[1]=(s16)(adrR.KdIn*1000);
-		sdata[2]=(s16)(adrR.A*1000);
-		sdata[3]=(s16)(adrR.B*1000);
+		sdata[2]=(s16)(adrR.KpOut*1000);
+		sdata[3]=(s16)(adrR.Kw*1000);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_CTRL);
 		ReqMsg2 &=~ REQ_ROL_CTRL;
-	}	
+	}
 	if(ReqMsg2 & REQ_PIT_CTRL)
 	{
 		sdata[0]=(s16)(adrP.KpIn*1000);
 		sdata[1]=(s16)(adrP.KdIn*1000);
-		sdata[2]=(s16)(adrP.A*1000);
-		sdata[3]=(s16)(adrP.B*1000);
+		sdata[2]=(s16)(adrP.KpOut*1000);
+		sdata[3]=(s16)(adrP.Kw*1000);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_CTRL);
 		ReqMsg2 &=~ REQ_PIT_CTRL;
 	}

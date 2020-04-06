@@ -16,30 +16,33 @@
 #define P_PIT_CTRL     0xA3  //PIT参数
 #define P_PIT_STAT     0xA4  //PIT状态
 //GlobalStat
-#define MOTOR_LOCK     0x01
-#define ACC_CALI       0x02
-#define GYRO_CALI      0x04
-#define FAIL_SAFE      0x10
-#define RC_RECEIVE     0xE0
-#define RC_RCV_CNT     0x20
+#define MOTOR_LOCK     0x01  //已解锁
+#define ACC_CALI       0x02  //准备校准加速度计
+#define GYRO_CALI      0x04  //准备校准陀螺仪
+#define SPEED_MODE     0x20  //速度模式
+#define TX_BUSY        0x40  //串口数据正通过DMA发送
+#define FAIL_SAFE      0x80  //飞行故障
 //ReqMsg1
-#define REQ_STAT   0x01
-#define REQ_ATTI   0x02
-#define REQ_SENSOR 0x04
-#define REQ_RC     0x08
-#define REQ_MOTOR  0x10
+#define REQ_STAT       0x01
+#define REQ_ATTI       0x02
+#define REQ_SENSOR     0x04
+#define REQ_RC         0x08
+#define REQ_MOTOR      0x10
+#define REQ_MODE_ATTI  0x40
+#define REQ_MODE_SPEED 0x80
 //ReqMsg2
 #define REQ_ROL_CTRL   0x01
 #define REQ_ROL_STAT   0x02
 #define REQ_PIT_CTRL   0x04
 #define REQ_PIT_STAT   0x08
-#define REQ_ACC_CALI   0x10
-#define REQ_GYRO_CALI  0x20
+#define REQ_ACC_CALI   0x40
+#define REQ_GYRO_CALI  0x80
 
 extern u8 FcnWord;  //被task.c调用
 extern u8 LenWord;  //被task.c调用
 extern u8 RxTemp[12];  //被task.c调用
 extern u8 GlobalStat;  //被control.c,task.c调用
+extern u8 RcvCnt;
 
 void Protocol_Init(void);
 void XDAA_Send_S16_Data(s16 *data,u8 len,u8 fcn);

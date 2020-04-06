@@ -146,6 +146,7 @@ int main(void)
 	Protocol_Init();
 	Para_Init();
 	LED1_PORT|=LED1_Pin;
+	LED2_PORT|=LED2_Pin;
 	LED3_PORT|=LED3_Pin;
 	LED4_PORT|=LED4_Pin;
   while (1)
@@ -153,11 +154,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		if(GlobalStat & RC_RECEIVE)
+		if(RcvCnt)
 		{
 			RC_Processing();
 			RC_Data_Send();
-			GlobalStat-=RC_RCV_CNT;
+			RcvCnt--;
 		}
 		if(TaskFlag & TASK_2ms)
 		{

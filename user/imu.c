@@ -90,7 +90,7 @@ u8 Gyro_Calibrate(AxisInt gyro)
 /***********************
 六轴融合互补滤波
 **********************/
-void IMUupdate(AxisInt acc,AxisInt *gyro,Quaternion *Q)
+void IMUupdate(AxisInt acc,AxisInt gyro,Quaternion *Q)
 {
 	float ax=acc.x,ay=acc.y,az=acc.z;  //归一化加速度计数据暂存
 	if(ax==0 && ay==0 && az==0)return;
@@ -115,9 +115,9 @@ void IMUupdate(AxisInt acc,AxisInt *gyro,Quaternion *Q)
 	eyInt+=ey*Ki;
 	ezInt+=ez*Ki;
 	//姿态误差补偿到角速度上,修正角速度积分漂移
-	float gx=GyroToRad(gyro->x)+Kp*ex+exInt;
-	float gy=GyroToRad(gyro->y)+Kp*ey+eyInt;
-	float gz=GyroToRad(gyro->z)+Kp*ez+ezInt;
+	float gx=GyroToRad(gyro.x)+Kp*ex+exInt;
+	float gy=GyroToRad(gyro.y)+Kp*ey+eyInt;
+	float gz=GyroToRad(gyro.z)+Kp*ez+ezInt;
 	//改进欧拉法数值求解四元数微分方程
 	float K0=-oq1*ogx-oq2*ogy-oq3*ogz;
 	float K1=oq0*ogx-oq3*ogy+oq2*ogz;
@@ -136,7 +136,4 @@ void IMUupdate(AxisInt acc,AxisInt *gyro,Quaternion *Q)
 	Q->q0=q0*norm;Q->q1=q1*norm;Q->q2=q2*norm;Q->q3=q3*norm;
 	oq0=Q->q0;oq1=Q->q1;oq2=Q->q2;oq3=Q->q3;
 	ogx=gx;ogy=gy;ogz=gz;
-	gyro->x=RadToGyro(gx);
-	gyro->y=RadToGyro(gy);
-	gyro->z=RadToGyro(gz);
 }
