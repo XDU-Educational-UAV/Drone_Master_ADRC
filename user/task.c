@@ -132,6 +132,10 @@ void RC_Monitor(void)
 		Fail_Safe();
 		ErrCnt--;
 	}
+	if(STAT_PORT & STAT_Pin)
+		LED3_PORT |= LED3_Pin;
+	else
+		LED3_PORT &=~ LED3_Pin;
 }
 
 void RC_Data_Send(void)

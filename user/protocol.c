@@ -98,7 +98,6 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if(huart->Instance!=USART2)	return;
 	GlobalStat&=~TX_BUSY;
-	TotalLen=0;
 }
 /***********************
 将待发送数据存入缓冲
@@ -124,6 +123,7 @@ void Total_Send(void)
 		SendBuff[i]=SendBuff2[i];
 	HAL_UART_Transmit_DMA(&huart2,SendBuff,TotalLen);
 	GlobalStat|=TX_BUSY;
+	TotalLen=0;
 }
 /***********************
 *@data:s16型数据
