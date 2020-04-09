@@ -25,9 +25,10 @@ typedef struct
 	short x,y,z;
 }AxisInt;
 
-float IIR_LowPassFilter(float DataIn,float *delay);
-void Acc_Calibrate(AxisInt *acc);
-void GYRO_Calibrate(AxisInt *gyro);
-void IMUupdate(AxisInt acc,AxisInt *gyro,Quaternion *Q);
+void Acc_Correct(AxisInt *acc);
+void Gyro_Correct(AxisInt *gyro);
+u8 Acc_Calibrate(AxisInt acc);
+u8 Gyro_Calibrate(AxisInt gyro);
+void IMUupdate(AxisInt acc,AxisInt gyro,Quaternion *Q);
 
 #endif

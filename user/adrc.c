@@ -6,7 +6,7 @@
 #define adrcR   4
 #define adrcH   0.02  //>=T
 #define adrcD   0.0016  //H*H*R
-#define T       0.02
+#define T       0.002
 
 /**********************
 离散系统最速控制综合函数
@@ -75,20 +75,15 @@ float ADRC_ESO(float u,float y,float b)
 
 /**********************
 线性扩张状态观测器
-x1'=x2;x2'=-x2+bu+w;
-*@u:输入信号
+x1'=x2;x2'=-a*x2+b*u+w;
 *@y:输出角速度
-*@b:输入信号增益
-*@z1:角速度x1的估计值(输入时应有初始值)
-*@z2:角加速度x2的估计值(输入时应有初始值)
-*@w:总扰动(输入时应有初始值)
 **********************/
-void ADRC_LESO(float u,float y,float a,float b,float *z1,float *z2,float *w)
+void ADRC_LESO(ADRC_Param *adrc,float y)
 {
-	float e=y-*z1;
-	*z1+=(*z2+15.0f*e)*T;
-	*z2+=(-a**z2+b*u+*w+75.0f*e)*T;
-	*w+=125.0f*e*T;
+	float e=y-adrc->SpeEst;
+	adrc->SpeEst+=(adrc->AccEst+15.0f*e)*T;
+	adrc->AccEst+=(-adrc->A*adrc->AccEst+adrc->B*adrc->u+adrc->w+75.0f*e)*T;
+	adrc->w+=125.0f*e*T;
 }
 
 /**********************
