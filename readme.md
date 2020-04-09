@@ -1,5 +1,5 @@
 # 小四轴飞控
-version V0.10
+version V0.11
 
 ## 代码说明
 
