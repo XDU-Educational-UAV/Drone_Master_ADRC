@@ -1,19 +1,23 @@
 # 小四轴飞控
 version V0.12
 
-     HEAD
-  M2  ↑  M3
+         HEAD
+	  M4  ↑  M1
 
-   \     /
+	   \     /
 
-     \ /
+	    \   /
 
-     / \
+	     \ /
 
-   /     \
+	     / \
 
-  M1     M4
+	    /   \
 
+	   /     \
+
+	  M3     M2
+	
 默认为姿态模式,可通过地面站进行更改。
 
 [!地面站](https://github.com/xd15zhn/GroundStation/blob/master/GroundStation/bin/Release/GroundStation.exe)
