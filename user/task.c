@@ -16,7 +16,7 @@ ADRC_Param adrR,adrP;  //自抗扰控制器参数(跨文件全局变量)
 u8 ReqMsg1=0;  //上位机指令1
 u8 ReqMsg2=0;  //上位机指令2
 u8 ErrCnt=0;  //未收到遥控器信号的次数(跨文件全局变量)
-float gx,gy;
+float gyrox,gyroy;  //角速度,单位度/秒(跨文件全局变量)
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -37,8 +37,8 @@ void IMU_Processing(void)
 	gyro.z=IIR_LowPassFilter(ogyro.z,IIRgz);
 	Acc_Correct(&acc);
 	Gyro_Correct(&gyro);
-	gx=GyroToDeg(gyro.x);
-	gy=GyroToDeg(gyro.y);
+	gyrox=GyroToDeg(gyro.x);
+	gyroy=GyroToDeg(gyro.y);
 	IMUupdate(acc,gyro,&Qpos);
 	if(GlobalStat & ACC_CALI)
 		if(!Acc_Calibrate(acc))
@@ -82,6 +82,10 @@ void RC_Processing(void)
 		}
 		else
 			GlobalStat&=~MOTOR_LOCK;
+		if((RxTemp[0] & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_SPEED)
+			GlobalStat|=SPEED_MODE;
+		else if((RxTemp[0] & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_ATTI)
+			GlobalStat&=~SPEED_MODE;
 		break;
 	case P_CTRL:
 		RCdata[0]=(RxTemp[0]<<8) | RxTemp[1];
@@ -92,10 +96,6 @@ void RC_Processing(void)
 	case P_REQ_CTRL:
 		ReqMsg1=RxTemp[0];
 		ReqMsg2=RxTemp[1];
-		if((ReqMsg1 & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_SPEED)
-			GlobalStat|=SPEED_MODE;
-		else if((ReqMsg1 & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_ATTI)
-			GlobalStat&=~SPEED_MODE;
 		if(ReqMsg2 & REQ_ACC_CALI)
 			GlobalStat|=ACC_CALI;
 		if(ReqMsg2 & REQ_GYRO_CALI)
@@ -104,15 +104,15 @@ void RC_Processing(void)
 	case P_ROL_CTRL:
 		adrR.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
-		adrR.A=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		adrR.B=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
+		adrR.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
+		adrR.Kw=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
 		ReqMsg2|=REQ_ROL_CTRL;
 		break;
 	case P_PIT_CTRL:
 		adrP.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
-		adrP.A=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		adrP.B=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
+		adrP.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
+		adrP.Kw=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
 		ReqMsg2|=REQ_PIT_CTRL;
 	default:break;
 	}
@@ -145,8 +145,9 @@ void RC_Data_Send(void)
 	//上位机请求1
 	if(ReqMsg1 & REQ_STAT)
 	{
-		u8 udata[2]={GlobalStat,(u8)Get_Battery_Voltage()};
-		XDAA_Send_U8_Data(udata,2,1);
+		u16 voltage=Get_Battery_Voltage();
+		u8 udata[3]={GlobalStat,BYTE1(voltage),BYTE0(voltage)};
+		XDAA_Send_U8_Data(udata,3,P_STAT);
 		ReqMsg1 &=~ REQ_STAT;
 	}
 	if(ReqMsg1 & REQ_ATTI)
@@ -159,7 +160,16 @@ void RC_Data_Send(void)
 		sdata[2]=(s16)(yaw*100);
 		XDAA_Send_S16_Data(sdata,3,P_ATTI);
 		ReqMsg1 &=~ REQ_ATTI;
-}
+	}
+	if(ReqMsg1 & REQ_QUATERNION)
+	{
+		sdata[0]=(s16)(Qpos.q0*10000.0f);
+		sdata[1]=(s16)(Qpos.q1*10000.0f);
+		sdata[2]=(s16)(Qpos.q2*10000.0f);
+		sdata[3]=(s16)(Qpos.q3*10000.0f);
+		XDAA_Send_S16_Data(sdata,4,P_QUATERNION);
+		ReqMsg1 &=~ REQ_QUATERNION;
+	}
 	if(ReqMsg1 & REQ_SENSOR)
 	{
 		sdata[0]=acc.x;sdata[1]=acc.y;sdata[2]=acc.z;
@@ -204,7 +214,7 @@ void RC_Data_Send(void)
 	{
 		sdata[0]=(s16)(adrR.SpeEst*100);
 		sdata[1]=(s16)(adrR.u*100);
-		sdata[2]=(s16)((gx-adrR.SpeEst)*100);
+		sdata[2]=(s16)((gyrox-adrR.SpeEst)*100);
 		sdata[3]=(s16)(adrR.AccEst*100);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_STAT);
 		ReqMsg2 &=~ REQ_ROL_STAT;
@@ -213,7 +223,7 @@ void RC_Data_Send(void)
 	{
 		sdata[0]=(s16)(adrP.SpeEst*100);
 		sdata[1]=(s16)(adrP.u*100);
-		sdata[2]=(s16)((gy-adrP.SpeEst)*1000);
+		sdata[2]=(s16)((gyroy-adrP.SpeEst)*1000);
 		sdata[3]=(s16)(adrP.AccEst*100);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_STAT);
 		ReqMsg2 &=~ REQ_PIT_STAT;
