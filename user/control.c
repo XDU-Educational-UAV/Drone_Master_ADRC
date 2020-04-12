@@ -5,20 +5,20 @@ Motor_Iner_loop();
 Motor_Outer_loop();
 与task.c共享头文件task.h
 --------------飞行器安装与控制---------------
-F450四轴，X型，红前白后，从右前方电机编号为1开始逆时针编号
+X型四轴,从左后方电机编号为1开始顺时针编号,1电机螺旋桨为逆时针
 ********************************************/
 short PwmOut[4]={0,0,0,0};  //把值赋给定时器，输出PWM
-float Kyaw=1;
 
 /**********************
 控制参数初始化
-必须在上电后至少一个PWM周期后进行
 **********************/
 void Para_Init(void)
 {
 	MOTOR1=PwmOut[0];MOTOR2=PwmOut[1];MOTOR3=PwmOut[2];MOTOR4=PwmOut[3];
-	adrR.KpOut=1.0f;adrR.KpIn=0.8f;adrR.KdIn=0.01f;adrR.Kw=0;
-	adrP.KpOut=1.0f;adrP.KpIn=0.3f;adrP.KdIn=0.00f;adrP.Kw=0;
+	adrR.KpOut=2.0f;adrR.KpIn=0.7f;adrR.KdIn=0.02f;adrR.Kw=0;
+	adrP.KpOut=2.0f;adrP.KpIn=0.7f;adrP.KdIn=0.02f;adrP.Kw=0;
+	Kyaw=1;
+	RolBias=20;PitBias=0;YawBias=0;
 }
 
 /**********************
@@ -30,10 +30,10 @@ void Motor_Iner_loop(void)
 	ADRC_LESO(&adrP,gyroy);
 	adrR.u=adrR.KpIn*(adrR.PosOut-gyrox)-adrR.KdIn*adrR.AccEst-adrR.Kw*adrR.w;
 	adrP.u=adrP.KpIn*(adrP.PosOut-gyroy)-adrP.KdIn*adrP.AccEst-adrP.Kw*adrP.w;
-	PwmOut[0]=RCdata[2]+DegToPwm(-adrR.u-adrP.u-PwmToDegAdd(RCdata[3]));
-	PwmOut[1]=RCdata[2]+DegToPwm(-adrR.u+adrP.u+PwmToDegAdd(RCdata[3]));
-	PwmOut[2]=RCdata[2]+DegToPwm(+adrR.u+adrP.u-PwmToDegAdd(RCdata[3]));
-	PwmOut[3]=RCdata[2]+DegToPwm(+adrR.u-adrP.u+PwmToDegAdd(RCdata[3]));
+	PwmOut[0]=RCdata[2]+DegToPwm(-adrR.u-adrP.u-YawOut);
+	PwmOut[1]=RCdata[2]+DegToPwm(-adrR.u+adrP.u+YawOut);
+	PwmOut[2]=RCdata[2]+DegToPwm(+adrR.u+adrP.u-YawOut);
+	PwmOut[3]=RCdata[2]+DegToPwm(+adrR.u-adrP.u+YawOut);
 	if(!(GlobalStat & MOTOR_LOCK))
 	{
 		MOTOR1=0;
@@ -69,17 +69,14 @@ void Motor_Outer_loop(void)
 	}
 	else
 	{
-		Quaternion Qexp;
-		float Hroll=PwmToRadAdd(RCdata[0])/2;
-		float Hpitch=PwmToRadAdd(RCdata[1])/2;
-		float Hyaw=PwmToRadAdd(RCdata[3])/2;
-		Qexp.q0=Mcos(Hroll)*Mcos(Hpitch)*Mcos(Hyaw)+Msin(Hroll)*Msin(Hpitch)*Msin(Hyaw);
-		Qexp.q1=Msin(Hroll)*Mcos(Hpitch)*Mcos(Hyaw)-Mcos(Hroll)*Msin(Hpitch)*Msin(Hyaw);
-		Qexp.q2=Mcos(Hroll)*Msin(Hpitch)*Mcos(Hyaw)+Msin(Hroll)*Mcos(Hpitch)*Msin(Hyaw);
-		Qexp.q3=Mcos(Hroll)*Mcos(Hpitch)*Msin(Hyaw)-Msin(Hroll)*Msin(Hpitch)*Mcos(Hyaw);
-		Quaternion Qerr=Quaternion_Error(Qexp,Qpos);
-		float norm=Q_rsqrt(Qerr.q1*Qerr.q1+Qerr.q2*Qerr.q2)*Macos(Qerr.q0);
-		adrR.PosOut=adrR.KpOut*RadToDeg(Qerr.q1*norm);
-		adrP.PosOut=adrP.KpOut*RadToDeg(Qerr.q2*norm);
+		float RolExp=PwmToDegAdd(RCdata[0]);
+		float PitExp=PwmToDegAdd(RCdata[1]);
+		float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
+		float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
+		adrR.PosOut=adrR.KpOut*(RolExp-roll);
+		adrP.PosOut=adrP.KpOut*(PitExp-pitch);
 	}
+	adrR.PosOut+=RolBias;
+	adrP.PosOut+=PitBias;
+	YawOut=Kyaw*PwmToDegAdd(RCdata[3])+YawBias;
 }
