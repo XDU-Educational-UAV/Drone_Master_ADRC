@@ -6,17 +6,20 @@ RC_Prepare();                  对接收机的信号进行预处理
 IMU_Processing();              姿态解算更新，MPU6050数据校准
 ********************************************/
 
-Quaternion Qpos={1,0,0,0};  //姿态四元数和期望四元数(跨文件全局变量)
-AxisInt acc;  //三轴加速度
-AxisInt gyro;  //三轴角速度(跨文件全局变量)
-AxisInt oacc;  //三轴加速度计原始数据
-AxisInt ogyro;  //三轴陀螺仪原始数据
-short RCdata[4];  //遥控器控制数据(跨文件全局变量)
-ADRC_Param adrR,adrP;  //自抗扰控制器参数(跨文件全局变量)
 u8 ReqMsg1=0;  //上位机指令1
 u8 ReqMsg2=0;  //上位机指令2
-u8 ErrCnt=0;  //未收到遥控器信号的次数(跨文件全局变量)
+u8 ErrCnt=0;  //未收到遥控器信号的次数
+AxisInt oacc;  //三轴加速度计原始数据
+AxisInt ogyro;  //三轴陀螺仪原始数据
+AxisInt acc;  //三轴加速度校准后数据
+AxisInt gyro;  //三轴角速度校准后数据
+Quaternion Qpos={1,0,0,0};  //姿态四元数和期望四元数(跨文件全局变量)
+short RCdata[4];  //遥控器控制数据(跨文件全局变量)
 float gyrox,gyroy;  //角速度,单位度/秒(跨文件全局变量)
+//以下为控制器相关参数
+ADRC_Param adrR,adrP;  //自抗扰控制器参数(跨文件全局变量)
+float Kyaw,YawOut;  //yaw轴比例控制与控制器输出(跨文件全局变量)
+float RolBias,PitBias,YawBias;  //固定偏差,用于抵消扰动(跨文件全局变量)
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -57,11 +60,14 @@ void IMU_Processing(void)
 void Fail_Safe(void)
 {
 	if(RCdata[2]<NORMALSPEED)
-		return;
-	RCdata[0]=500;
-	RCdata[1]=500;
-	RCdata[2]=NORMALSPEED;
-	RCdata[3]=500;
+		GlobalStat&=~MOTOR_LOCK;
+	else
+	{
+		RCdata[0]=500;
+		RCdata[1]=500;
+		RCdata[2]=NORMALSPEED;
+		RCdata[3]=500;
+	}
 }
 
 /***********************
@@ -105,14 +111,14 @@ void RC_Processing(void)
 		adrR.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrR.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		adrR.Kw=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
+		RolBias=(short)(RxTemp[6]*256.0f+RxTemp[7])/100.0f;
 		ReqMsg2|=REQ_ROL_CTRL;
 		break;
 	case P_PIT_CTRL:
 		adrP.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrP.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		adrP.Kw=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
+		PitBias=(short)(RxTemp[6]*256.0f+RxTemp[7])/100.0f;
 		ReqMsg2|=REQ_PIT_CTRL;
 	default:break;
 	}
@@ -163,10 +169,10 @@ void RC_Data_Send(void)
 	}
 	if(ReqMsg1 & REQ_QUATERNION)
 	{
-		sdata[0]=(s16)(Qpos.q0*10000.0f);
-		sdata[1]=(s16)(Qpos.q1*10000.0f);
-		sdata[2]=(s16)(Qpos.q2*10000.0f);
-		sdata[3]=(s16)(Qpos.q3*10000.0f);
+		sdata[0]=(s16)(Qpos.q0*10000);
+		sdata[1]=(s16)(Qpos.q1*10000);
+		sdata[2]=(s16)(Qpos.q2*10000);
+		sdata[3]=(s16)(Qpos.q3*10000);
 		XDAA_Send_S16_Data(sdata,4,P_QUATERNION);
 		ReqMsg1 &=~ REQ_QUATERNION;
 	}
@@ -197,7 +203,7 @@ void RC_Data_Send(void)
 		sdata[0]=(s16)(adrR.KpIn*1000);
 		sdata[1]=(s16)(adrR.KdIn*1000);
 		sdata[2]=(s16)(adrR.KpOut*1000);
-		sdata[3]=(s16)(adrR.Kw*1000);
+		sdata[3]=(s16)(RolBias*100);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_CTRL);
 		ReqMsg2 &=~ REQ_ROL_CTRL;
 	}
@@ -206,7 +212,7 @@ void RC_Data_Send(void)
 		sdata[0]=(s16)(adrP.KpIn*1000);
 		sdata[1]=(s16)(adrP.KdIn*1000);
 		sdata[2]=(s16)(adrP.KpOut*1000);
-		sdata[3]=(s16)(adrP.Kw*1000);
+		sdata[3]=(s16)(PitBias*100);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_CTRL);
 		ReqMsg2 &=~ REQ_PIT_CTRL;
 	}
@@ -214,7 +220,7 @@ void RC_Data_Send(void)
 	{
 		sdata[0]=(s16)(adrR.SpeEst*100);
 		sdata[1]=(s16)(adrR.u*100);
-		sdata[2]=(s16)((gyrox-adrR.SpeEst)*100);
+		sdata[2]=(s16)(adrR.w*100);
 		sdata[3]=(s16)(adrR.AccEst*100);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_STAT);
 		ReqMsg2 &=~ REQ_ROL_STAT;
@@ -223,7 +229,7 @@ void RC_Data_Send(void)
 	{
 		sdata[0]=(s16)(adrP.SpeEst*100);
 		sdata[1]=(s16)(adrP.u*100);
-		sdata[2]=(s16)((gyroy-adrP.SpeEst)*1000);
+		sdata[2]=(s16)(adrP.w*1000);
 		sdata[3]=(s16)(adrP.AccEst*100);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_STAT);
 		ReqMsg2 &=~ REQ_PIT_STAT;

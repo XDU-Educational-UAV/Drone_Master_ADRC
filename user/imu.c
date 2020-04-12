@@ -12,8 +12,8 @@ const float accA[3][3]={
 	{0.984375f,-0.019751222473827f,0.005168265332243f},
 	{-0.0390625f,1,0.046875f},
 	{-0.0234375f,0.0390625f,1}};
-short accB[3]={-4644,-4102,1700};
-short gyroB[3]={50,10,0};
+short accB[3]={-4955,-3893,1866};
+short gyroB[3]={447,45,-1};
 
 /***********************
 用事先确定的校准参数校正加速度计原始数据
@@ -98,7 +98,7 @@ void IMUupdate(AxisInt acc,AxisInt gyro,Quaternion *Q)
 	if(q0==0 && q1==0 && q2==0 && q3==0)return;
 	static float ogx=0,ogy=0,ogz=0;  //上一时刻的角速度
 	static float oq0=1,oq1=0,oq2=0,oq3=0;  //上一时刻的四元数
-	static float exInt=0,eyInt=0,ezInt=0;
+	static float exInt=0,eyInt=0;
 	//重力加速度归一化
 	float norm=Q_rsqrt(ax*ax+ay*ay+az*az);
 	ax*=norm;ay*=norm;az*=norm;
@@ -109,15 +109,13 @@ void IMUupdate(AxisInt acc,AxisInt gyro,Quaternion *Q)
 	//向量叉积得出姿态误差
 	float ex=ay*vz-az*vy; 
 	float ey=az*vx-ax*vz;
-	float ez=ax*vy-ay*vx;
 	//对误差进行积分
 	exInt+=ex*Ki;
 	eyInt+=ey*Ki;
-	ezInt+=ez*Ki;
 	//姿态误差补偿到角速度上,修正角速度积分漂移
 	float gx=GyroToRad(gyro.x)+Kp*ex+exInt;
 	float gy=GyroToRad(gyro.y)+Kp*ey+eyInt;
-	float gz=GyroToRad(gyro.z)+Kp*ez+ezInt;
+	float gz=GyroToRad(gyro.z);
 	//改进欧拉法数值求解四元数微分方程
 	float K0=-oq1*ogx-oq2*ogy-oq3*ogz;
 	float K1=oq0*ogx-oq3*ogy+oq2*ogz;

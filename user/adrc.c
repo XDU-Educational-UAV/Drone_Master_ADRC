@@ -1,11 +1,24 @@
 #include "adrc.h"
 /**************文件说明**********************
 自抗扰控制器相关函数,不一定所有的函数都能用上
+用上的在前
 ********************************************/
-#define adrcR   4
-#define adrcH   0.02  //>=T
-#define adrcD   0.0016  //H*H*R
+
+/**********************
+线性扩张状态观测器
+x1'=x2;x2'=-x2+u+w;
+*@y:输出角速度
+**********************/
 #define T       0.002
+void ADRC_LESO(ADRC_Param *adrc,float y)
+{
+	float e=y-adrc->SpeEst;
+	adrc->SpeEst+=(adrc->AccEst+15.0f*e)*T;
+	adrc->AccEst+=(adrc->u-adrc->AccEst+adrc->w+75.0f*e)*T;
+	adrc->w+=125.0f*e*T;
+}
+
+//以下函数暂时未用上
 
 /**********************
 离散系统最速控制综合函数
@@ -13,6 +26,9 @@
 *@x2:二阶积分器输出的微分
 *@return:控制量输出
 **********************/
+#define adrcR   4
+#define adrcH   0.02  //>=T
+#define adrcD   0.0016  //H*H*R
 float ADRC_fhan(float x1, float x2)
 {
 	float y1 = x1 + adrcH*x2;
@@ -70,17 +86,4 @@ float ADRC_ESO(float u,float y,float b)
 	z2-=220*ADRC_fal(e);
 	float w=z2/b;
 	return w;
-}
-
-/**********************
-线性扩张状态观测器
-x1'=x2;x2'=-a*x2+b*u+w;
-*@y:输出角速度
-**********************/
-void ADRC_LESO(ADRC_Param *adrc,float y)
-{
-	float e=y-adrc->SpeEst;
-	adrc->SpeEst+=(adrc->AccEst+15.0f*e)*T;
-	adrc->AccEst+=(adrc->u-adrc->AccEst+adrc->w+75.0f*e)*T;
-	adrc->w+=125.0f*e*T;
 }

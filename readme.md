@@ -1,31 +1,33 @@
 # 小四轴飞控
-version V0.12
+version V0.13
 
-     HEAD
-  M2  ↑  M3
+         HEAD
+	  M2  ↑  M3
 
-   \     /
+	   \     /
 
-     \ /
+	    \   /
 
-     / \
+	     \ /
 
-   /     \
+	     / \
 
-  M1     M4
+	    /   \
+
+	   /     \
+
+	  M1     M4
 
 默认为姿态模式,可通过地面站进行更改。
 
-[!地面站](https://github.com/xd15zhn/GroundStation/blob/master/GroundStation/bin/Release/GroundStation.exe)
+[地面站](https://github.com/xd15zhn/GroundStation/blob/master/GroundStation/bin/Release/GroundStation.exe)
 
 ## 代码说明
 
 ### 关于偏航
 偏航方向为开环控制,即完全放弃偏航方向的反馈
 
-{task.c, IMU_Processing()}将读取到的偏航角速度置零
-
-{imu.c}偏航角速度校准值为0
+{imu.c}互补滤波中z轴角速度不接受加速度计校准
 
 如果考虑偏航方向需注意:
 
@@ -64,5 +66,7 @@ version V0.12
 
 起飞后（即油门超过一定值）2秒内未接收到正确的遥控信号或飞机姿态倾角过大，将进入失控保护模式尝试平稳降落，重新收到信号或姿态恢复正常则可随时恢复控制。
 
+解锁后2秒内未接收到正确的遥控信号自动锁定
+
 ## bug与隐患
-*速度模式参数基本调整完毕,姿态模式由于四元数问题而待调整
+*所有参数基本调整完毕,等待试飞

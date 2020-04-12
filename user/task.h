@@ -23,11 +23,12 @@
 #define UNLOCKED      2    //解锁状态
 #define LOCK_TIME     20   //解锁时间,2秒
 
-extern short RCdata[];  //被control.c调用
-extern AxisInt gyro;  //被control.c调用
-extern ADRC_Param adrR,adrP;  //被control.c调用
 extern Quaternion Qpos;  //被control.c调用
+extern short RCdata[];  //被control.c调用
 extern float gyrox,gyroy;  //被control.c调用
+extern ADRC_Param adrR,adrP;  //被control.c调用
+extern float Kyaw,YawOut;  //被control.c调用
+extern float RolBias,PitBias,YawBias;;  //被control.c调用
 
 //在task.c中
 void IMU_Processing(void);
