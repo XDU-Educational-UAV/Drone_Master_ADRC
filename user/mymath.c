@@ -8,15 +8,16 @@
 反正切函数1   Matan(x)    (-∞,∞)          (-pi/2,pi/2)
 反正切函数2   Matan2(y,x) (-∞,∞)          (-pi/2,pi/2)
 反正弦函数    Masin(x)    [-1,1]          [-pi/2,pi/2]
+反余弦函数    Macos(x)    [-1,1]          [0,pi]
 平方根函数    Msqrt       [0,∞)           [0,∞)
 平方根倒数    Q_rsqrt     (0,∞)           (0,∞)
 自然指数函数  Mexp        (-∞,∞)          (0,∞)
 自然对数函数  Mln         (0,∞)           (-∞,∞)
 绝对值        ABS
 符号          SIGN
+饱和          LIMIT
 较小值        MIN
 较大值        MAX
-饱和          SAT
 --------滤波器---------
 低通滤波器    IIR_LowPassFilter
 ********************************************/
@@ -106,6 +107,19 @@ float Mexp(float x)
 {
 	long i = (long)(x * 12102203 + 1064872507);
 	return *(float*)&i;
+}
+
+/**********************
+求出姿态四元数pos到期望四元数exp之间的误差四元数
+**********************/
+Quaternion Quaternion_Error(Quaternion E,Quaternion P)
+{
+	Quaternion ans;
+	ans.q0=E.q0*P.q0+E.q1*P.q1+E.q2*P.q2+E.q3*P.q3;
+	ans.q1=P.q0*E.q1-E.q0*P.q1+E.q3*P.q2-E.q2*P.q3;
+	ans.q2=P.q0*E.q2-E.q0*P.q2+E.q1*P.q3-E.q3*P.q1;
+	ans.q3=P.q0*E.q3-E.q0*P.q3+E.q2*P.q1-E.q1*P.q2;
+	return ans;
 }
 
 /***********************

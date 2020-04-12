@@ -1,7 +1,6 @@
 #include "adrc.h"
 /**************文件说明**********************
 自抗扰控制器相关函数,不一定所有的函数都能用上
-附加一个与自抗扰控制无关的误差四元数计算函数
 ********************************************/
 #define adrcR   4
 #define adrcH   0.02  //>=T
@@ -82,19 +81,6 @@ void ADRC_LESO(ADRC_Param *adrc,float y)
 {
 	float e=y-adrc->SpeEst;
 	adrc->SpeEst+=(adrc->AccEst+15.0f*e)*T;
-	adrc->AccEst+=(-adrc->A*adrc->AccEst+adrc->B*adrc->u+adrc->w+75.0f*e)*T;
+	adrc->AccEst+=(adrc->u-adrc->AccEst+adrc->w+75.0f*e)*T;
 	adrc->w+=125.0f*e*T;
-}
-
-/**********************
-求出姿态四元数pos到期望四元数exp之间的误差四元数
-**********************/
-Quaternion Quaternion_Error(Quaternion E,Quaternion P)
-{
-	Quaternion ans;
-	ans.q0=E.q0*P.q0+E.q1*P.q1+E.q2*P.q2+E.q3*P.q3;
-	ans.q1=P.q0*E.q1-E.q0*P.q1+E.q3*P.q2-E.q2*P.q3;
-	ans.q2=P.q0*E.q2-E.q0*P.q2+E.q1*P.q3-E.q3*P.q1;
-	ans.q3=P.q0*E.q3-E.q0*P.q3+E.q2*P.q1-E.q1*P.q2;
-	return ans;
 }

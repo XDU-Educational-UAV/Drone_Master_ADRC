@@ -12,8 +12,6 @@ typedef struct
 	float KpIn;      //内环速度比例控制
 	float KdIn;      //内环加速度比例控制
 	float Kw;        //扩张状态观测器补偿大小
-	float B;         //一阶模型参数b G(s)=b/(s+a)
-	float A;         //一阶模型参数a G(s)=b/(s+a)
 	//运行参数
 	float PosOut;    //位置误差输出
 	float SpeEst;    //角速度的状态估计

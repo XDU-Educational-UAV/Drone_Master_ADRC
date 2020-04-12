@@ -27,7 +27,7 @@ extern short RCdata[];  //被control.c调用
 extern AxisInt gyro;  //被control.c调用
 extern ADRC_Param adrR,adrP;  //被control.c调用
 extern Quaternion Qpos;  //被control.c调用
-extern float gx,gy;  //被control.c调用
+extern float gyrox,gyroy;  //被control.c调用
 
 //在task.c中
 void IMU_Processing(void);
