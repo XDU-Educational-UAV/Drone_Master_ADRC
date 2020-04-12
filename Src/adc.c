@@ -153,13 +153,23 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 } 
 
 /* USER CODE BEGIN 1 */
-u32 voltage=0;
-//电压值乘100.先计算上一次的转换结果再开始转换
-double Get_Battery_Voltage(void)
+//电压值乘2000.先计算上一次的转换结果再开始转换
+u16 Get_Battery_Voltage(void)
 {
-	double AdcData=(voltage*330-10000)/4096;
+	static u32 voltage=0x93E;
+	static u16 AdcBuf[8]={0x93E};
+	u32 AdcSum=0;
+	u16 AdcData=(voltage*3300-100000)>>11;
+	for(char i=0;i<7;i++)
+	{
+		AdcBuf[i]=AdcBuf[i+1];
+		AdcSum+=AdcBuf[i];
+	}
+	AdcBuf[7]=AdcData;
+	AdcSum+=AdcData;
+	AdcSum>>=3;
 	HAL_ADC_Start_DMA(&hadc1,&voltage,1);
-	return AdcData;
+	return AdcSum;
 }
 /* USER CODE END 1 */
 

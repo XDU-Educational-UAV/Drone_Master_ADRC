@@ -8,6 +8,7 @@ Motor_Outer_loop();
 F450四轴，X型，红前白后，从右前方电机编号为1开始逆时针编号
 ********************************************/
 short PwmOut[4]={0,0,0,0};  //把值赋给定时器，输出PWM
+float Kyaw=1;
 
 /**********************
 控制参数初始化
@@ -16,8 +17,8 @@ short PwmOut[4]={0,0,0,0};  //把值赋给定时器，输出PWM
 void Para_Init(void)
 {
 	MOTOR1=PwmOut[0];MOTOR2=PwmOut[1];MOTOR3=PwmOut[2];MOTOR4=PwmOut[3];
-	adrR.A=1;adrR.B=1;adrR.KpIn=0.7f;adrR.KdIn=0.01f;adrR.Kw=0;
-	adrP.A=1;adrP.B=1;adrP.KpIn=0.2f;adrP.KdIn=0.00f;adrP.Kw=0;
+	adrR.KpOut=1.0f;adrR.KpIn=0.8f;adrR.KdIn=0.01f;adrR.Kw=0;
+	adrP.KpOut=1.0f;adrP.KpIn=0.3f;adrP.KdIn=0.00f;adrP.Kw=0;
 }
 
 /**********************
@@ -25,14 +26,14 @@ void Para_Init(void)
 **********************/
 void Motor_Iner_loop(void)
 {
-	ADRC_LESO(&adrR,gx);
-	ADRC_LESO(&adrP,gy);
-	adrR.u=adrR.KpIn*(adrR.PosOut-gx)-adrR.KdIn*adrR.AccEst-adrR.Kw*adrR.w;
-	adrP.u=adrP.KpIn*(adrP.PosOut-gy)-adrP.KdIn*adrP.AccEst-adrP.Kw*adrP.w;
-	PwmOut[0]=RCdata[2]+DegToPwm(-adrR.u-adrP.u);
-	PwmOut[1]=RCdata[2]+DegToPwm(-adrR.u+adrP.u);
-	PwmOut[2]=RCdata[2]+DegToPwm(+adrR.u+adrP.u);
-	PwmOut[3]=RCdata[2]+DegToPwm(+adrR.u-adrP.u);
+	ADRC_LESO(&adrR,gyrox);
+	ADRC_LESO(&adrP,gyroy);
+	adrR.u=adrR.KpIn*(adrR.PosOut-gyrox)-adrR.KdIn*adrR.AccEst-adrR.Kw*adrR.w;
+	adrP.u=adrP.KpIn*(adrP.PosOut-gyroy)-adrP.KdIn*adrP.AccEst-adrP.Kw*adrP.w;
+	PwmOut[0]=RCdata[2]+DegToPwm(-adrR.u-adrP.u-PwmToDegAdd(RCdata[3]));
+	PwmOut[1]=RCdata[2]+DegToPwm(-adrR.u+adrP.u+PwmToDegAdd(RCdata[3]));
+	PwmOut[2]=RCdata[2]+DegToPwm(+adrR.u+adrP.u-PwmToDegAdd(RCdata[3]));
+	PwmOut[3]=RCdata[2]+DegToPwm(+adrR.u-adrP.u+PwmToDegAdd(RCdata[3]));
 	if(!(GlobalStat & MOTOR_LOCK))
 	{
 		MOTOR1=0;
@@ -63,8 +64,8 @@ void Motor_Outer_loop(void)
 {
 	if(GlobalStat & SPEED_MODE)
 	{
-		adrR.PosOut=PwmToDegAdd(RCdata[0]);
-		adrP.PosOut=PwmToDegAdd(RCdata[1]);
+		adrR.PosOut=PwmToDegAdd(RCdata[0])/adrR.KpIn;
+		adrP.PosOut=PwmToDegAdd(RCdata[1])/adrP.KpIn;
 	}
 	else
 	{
@@ -77,7 +78,8 @@ void Motor_Outer_loop(void)
 		Qexp.q2=Mcos(Hroll)*Msin(Hpitch)*Mcos(Hyaw)+Msin(Hroll)*Mcos(Hpitch)*Msin(Hyaw);
 		Qexp.q3=Mcos(Hroll)*Mcos(Hpitch)*Msin(Hyaw)-Msin(Hroll)*Msin(Hpitch)*Mcos(Hyaw);
 		Quaternion Qerr=Quaternion_Error(Qexp,Qpos);
-		adrR.PosOut=adrR.KpOut*RadToDeg(Masin(Qerr.q1));
-		adrP.PosOut=adrP.KpOut*RadToDeg(Masin(Qerr.q2));
+		float norm=Q_rsqrt(Qerr.q1*Qerr.q1+Qerr.q2*Qerr.q2)*Macos(Qerr.q0);
+		adrR.PosOut=adrR.KpOut*RadToDeg(Qerr.q1*norm);
+		adrP.PosOut=adrP.KpOut*RadToDeg(Qerr.q2*norm);
 	}
 }
