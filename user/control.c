@@ -74,7 +74,7 @@ void Motor_Outer_loop(void)
 		float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
 		float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
 		adrR.PosOut=adrR.KpOut*(RolExp-roll);
-		adrP.PosOut=adrP.KpOut*(PitExp-pitch);
+		adrP.PosOut=adrP.KpOut*(pitch-PitExp);
 	}
 	adrR.PosOut+=RolBias;
 	adrP.PosOut+=PitBias;
