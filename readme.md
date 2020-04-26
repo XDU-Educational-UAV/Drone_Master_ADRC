@@ -1,5 +1,5 @@
 # 小四轴飞控
-version V0.14
+version V1.00
 
          HEAD
 	  M2  ↑  M3
