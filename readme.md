@@ -2,7 +2,7 @@
 version V1.00
 
          HEAD
-	  M2  ↑  M3
+	 M2    ↑     M3
 
 	   \         /
 
@@ -16,7 +16,7 @@ version V1.00
 
 	   /         \
 
-	  M1     M4
+	 M1          M4
 
 电机M1至M4分别为逆顺逆顺。
 
