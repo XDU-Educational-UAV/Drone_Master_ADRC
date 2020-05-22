@@ -7,7 +7,6 @@ Motor_Outer_loop();
 --------------飞行器安装与控制---------------
 X型四轴,从左后方电机编号为1开始顺时针编号,1电机螺旋桨为逆时针
 ********************************************/
-short PwmOut[4]={0,0,0,0};  //把值赋给定时器，输出PWM
 
 /**********************
 控制参数初始化
@@ -16,9 +15,9 @@ void Para_Init(void)
 {
 	MOTOR1=PwmOut[0];MOTOR2=PwmOut[1];MOTOR3=PwmOut[2];MOTOR4=PwmOut[3];
 	adrR.KpOut=2.0f;adrR.KpIn=0.7f;adrR.KdIn=0.02f;adrR.Kw=0;
-	adrP.KpOut=2.0f;adrP.KpIn=0.7f;adrP.KdIn=0.02f;adrP.Kw=0;
-	Kyaw=1;
-	RolBias=20;PitBias=0;YawBias=0;
+	adrP.KpOut=0;adrP.KpIn=0;adrP.KdIn=0;adrP.Kw=0;
+	Kyaw=0;
+	RolBias=0;PitBias=0;YawBias=0;
 }
 
 /**********************
@@ -26,14 +25,16 @@ void Para_Init(void)
 **********************/
 void Motor_Iner_loop(void)
 {
-	ADRC_LESO(&adrR,gyrox);
-	ADRC_LESO(&adrP,gyroy);
-	adrR.u=adrR.KpIn*(adrR.PosOut-gyrox)-adrR.KdIn*adrR.AccEst-adrR.Kw*adrR.w;
-	adrP.u=adrP.KpIn*(adrP.PosOut-gyroy)-adrP.KdIn*adrP.AccEst-adrP.Kw*adrP.w;
-	PwmOut[0]=RCdata[2]+DegToPwm(-adrR.u-adrP.u-YawOut);
-	PwmOut[1]=RCdata[2]+DegToPwm(-adrR.u+adrP.u+YawOut);
-	PwmOut[2]=RCdata[2]+DegToPwm(+adrR.u+adrP.u-YawOut);
-	PwmOut[3]=RCdata[2]+DegToPwm(+adrR.u-adrP.u+YawOut);
+	float gx=GyroToDeg(gyro.x);
+	float gy=GyroToDeg(gyro.y);
+	ADRC_LESO(&adrR,gx);
+	ADRC_LESO(&adrP,gy);
+	adrR.u=adrR.KpIn*(adrR.PosOut-gx)-adrR.KdIn*adrR.AccEst-adrR.Kw*adrR.w;
+	adrP.u=adrP.KpIn*(adrP.PosOut-gy)-adrP.KdIn*adrP.AccEst-adrP.Kw*adrP.w;
+	PwmOut[0]=throttle+DegToPwm(-adrR.u-adrP.u-YawOut);
+	PwmOut[1]=throttle+DegToPwm(-adrR.u+adrP.u+YawOut);
+	PwmOut[2]=throttle+DegToPwm(+adrR.u+adrP.u-YawOut);
+	PwmOut[3]=throttle+DegToPwm(+adrR.u-adrP.u+YawOut);
 	if(!(GlobalStat & MOTOR_LOCK))
 	{
 		MOTOR1=0;
@@ -41,7 +42,7 @@ void Motor_Iner_loop(void)
 		MOTOR3=0;
 		MOTOR4=0;
 	}
-	else if(RCdata[2]<=LOWSPEED)
+	else if(throttle<=LOWSPEED)
 	{
 		MOTOR1=LOWSPEED;
 		MOTOR2=LOWSPEED;
@@ -71,12 +72,10 @@ void Motor_Outer_loop(void)
 	{
 		float RolExp=PwmToDegAdd(RCdata[0]);
 		float PitExp=PwmToDegAdd(RCdata[1]);
-		float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
-		float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
 		adrR.PosOut=adrR.KpOut*(RolExp-roll);
 		adrP.PosOut=adrP.KpOut*(pitch-PitExp);
 	}
 	adrR.PosOut+=RolBias;
 	adrP.PosOut+=PitBias;
-	YawOut=Kyaw*PwmToDegAdd(RCdata[3])+YawBias;
+	YawOut=PwmToDegAdd(RCdata[3]+YawBias)-Kyaw*GyroToDeg(gyro.z);
 }

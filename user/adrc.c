@@ -14,7 +14,7 @@ void ADRC_LESO(ADRC_Param *adrc,float y)
 {
 	float e=y-adrc->SpeEst;
 	adrc->SpeEst+=(adrc->AccEst+15.0f*e)*T;
-	adrc->AccEst+=(adrc->u-adrc->AccEst+adrc->w+75.0f*e)*T;
+	adrc->AccEst+=(adrc->u-adrc->AccEst+adrc->w +75.0f*e)*T;
 	adrc->w+=125.0f*e*T;
 }
 

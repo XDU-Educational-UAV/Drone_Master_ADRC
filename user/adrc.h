@@ -32,6 +32,5 @@ float ADRC_TD(float r,float *derivative);
 float ADRC_fal(float x);
 float ADRC_ESO(float u,float y,float b);
 void ADRC_LESO(ADRC_Param *adrc,float y);
-Quaternion Quaternion_Error(Quaternion E,Quaternion P);
 
 #endif

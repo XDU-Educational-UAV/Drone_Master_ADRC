@@ -7,28 +7,29 @@
 #include "adrc.h"
 #include "adc.h"
 
-#define WHO_AM_I       0x48
-
 #define MOTOR1        (TIM1->CCR3) 
 #define MOTOR2        (TIM1->CCR2)
 #define MOTOR3        (TIM1->CCR4)
 #define MOTOR4        (TIM1->CCR1)
 
-#define LOWSPEED      100  //怠速
-#define NORMALSPEED   400  //缓慢下降的大致速度,用于失控保护
+#define LOWSPEED      50  //怠速
+#define NORMALSPEED   400  //平衡时的油门大小
 #define ERR_TIME      20   //没能收到正确遥控器信号的次数
+#define LOST_TIME     100  //长时间没能收到正确遥控器信号的次数
 //LockMode
 #define LOCKED        0    //锁定状态且无操作
 #define TOUNLOCK      1    //锁定状态且尝试解锁
 #define UNLOCKED      2    //解锁状态
 #define LOCK_TIME     20   //解锁时间,2秒
 
-extern Quaternion Qpos;  //被control.c调用
-extern short RCdata[];  //被control.c调用
-extern float gyrox,gyroy;  //被control.c调用
-extern ADRC_Param adrR,adrP;  //被control.c调用
-extern float Kyaw,YawOut;  //被control.c调用
-extern float RolBias,PitBias,YawBias;;  //被control.c调用
+extern AxisInt gyro;
+extern float roll,pitch,yaw;
+extern short RCdata[];
+extern ADRC_Param adrR,adrP;
+extern float Kyaw,YawOut;
+extern float RolBias,PitBias,YawBias;
+extern float throttle;
+extern short PwmOut[];
 
 //在task.c中
 void IMU_Processing(void);
