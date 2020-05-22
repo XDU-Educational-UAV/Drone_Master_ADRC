@@ -18,7 +18,6 @@
 饱和          LIMIT
 较小值        MIN
 较大值        MAX
---------滤波器---------
 低通滤波器    IIR_LowPassFilter
 ********************************************/
 
@@ -109,17 +108,17 @@ float Mexp(float x)
 	return *(float*)&i;
 }
 
-/**********************
-求出姿态四元数pos到期望四元数exp之间的误差四元数
-**********************/
-Quaternion Quaternion_Error(Quaternion E,Quaternion P)
+//油门在平衡位置处缓和
+short moderate(short x,short T)
 {
-	Quaternion ans;
-	ans.q0=E.q0*P.q0+E.q1*P.q1+E.q2*P.q2+E.q3*P.q3;
-	ans.q1=P.q0*E.q1-E.q0*P.q1+E.q3*P.q2-E.q2*P.q3;
-	ans.q2=P.q0*E.q2-E.q0*P.q2+E.q1*P.q3-E.q3*P.q1;
-	ans.q3=P.q0*E.q3-E.q0*P.q3+E.q2*P.q1-E.q1*P.q2;
-	return ans;
+	float y;
+	if(x<T-200)
+		y=((float)T-100)/((float)T-200)*x;
+	else if(x<T+200)
+		y=(x+T)>>1;
+	else
+		y=(900.0f-(float)T)/(800.0f-(float)T)*(x-T-200)+T+100;
+	return y;
 }
 
 /***********************
@@ -135,22 +134,4 @@ float IIR_LowPassFilter(float DataIn,float *delay)
 	delay[2] = delay[1];
 	delay[1] = delay[0];
 	return DataOut;
-}
-
-/***********************
-二阶IIR带阻滤波，直接II型结构
-*@delay:需要暂存3个状态变量的存储空间
-*@DataIn:每次新增的数据
-*@theta:阻带中心频率
-*@depth:陷波深度
-输出滤波后的新增数据
-**********************/
-float IIR_BandStopFilter(float DataIn,float *delay,float theta,float depth)
-{
-	delay[0]=DataIn+0.8f*delay[1]-0.32f*delay[2];
-	float DataOut=delay[0]-2*depth*Mcos(theta)*delay[1]+depth*depth*delay[2];
-	float k=0.52f/(1.0f+depth*depth-2*depth*Mcos(theta));
-	delay[2] = delay[1];
-	delay[1] = delay[0];
-	return DataOut*k;
 }

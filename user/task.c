@@ -6,20 +6,18 @@ RC_Prepare();                  对接收机的信号进行预处理
 IMU_Processing();              姿态解算更新，MPU6050数据校准
 ********************************************/
 
-u8 ReqMsg1=0;  //上位机指令1
-u8 ReqMsg2=0;  //上位机指令2
+u8 ReqMsg1=0,ReqMsg2=0,ReqMsg3=0;  //上位机指令
 u8 ErrCnt=0;  //未收到遥控器信号的次数
-AxisInt oacc;  //三轴加速度计原始数据
-AxisInt ogyro;  //三轴陀螺仪原始数据
 AxisInt acc;  //三轴加速度校准后数据
+//以下参数为控制器所使用
 AxisInt gyro;  //三轴角速度校准后数据
-Quaternion Qpos={1,0,0,0};  //姿态四元数和期望四元数(跨文件全局变量)
-short RCdata[4];  //遥控器控制数据(跨文件全局变量)
-float gyrox,gyroy;  //角速度,单位度/秒(跨文件全局变量)
-//以下为控制器相关参数
-ADRC_Param adrR,adrP;  //自抗扰控制器参数(跨文件全局变量)
-float Kyaw,YawOut;  //yaw轴比例控制与控制器输出(跨文件全局变量)
-float RolBias,PitBias,YawBias;  //固定偏差,用于抵消扰动(跨文件全局变量)
+float roll,pitch,yaw;  //飞行器姿态
+short RCdata[4];  //遥控器控制数据
+ADRC_Param adrR,adrP;  //自抗扰控制器参数
+float Kyaw,YawOut;  //yaw轴比例控制与控制器输出
+float RolBias,PitBias,YawBias;  //固定偏差,用于抵消扰动
+float throttle=0;  //平衡位置处缓和的实际参考油门输出
+short PwmOut[4];  //油门输出,把值赋给定时器,输出PWM
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -29,6 +27,7 @@ void IMU_Processing(void)
 {
 	static float IIRax[3],IIRay[3],IIRaz[3];
 	static float IIRgx[3],IIRgy[3],IIRgz[3];
+	AxisInt oacc,ogyro;
 	MPU_Get_Accelerometer(&acc.x,&acc.y,&acc.z);
 	MPU_Get_Gyroscope(&gyro.x,&gyro.y,&gyro.z);
 	oacc=acc;ogyro=gyro;
@@ -40,9 +39,7 @@ void IMU_Processing(void)
 	gyro.z=IIR_LowPassFilter(ogyro.z,IIRgz);
 	Acc_Correct(&acc);
 	Gyro_Correct(&gyro);
-	gyrox=GyroToDeg(gyro.x);
-	gyroy=GyroToDeg(gyro.y);
-	IMUupdate(acc,gyro,&Qpos);
+	IMUupdate(acc,gyro,&roll,&pitch,&yaw);
 	if(GlobalStat & ACC_CALI)
 		if(!Acc_Calibrate(acc))
 			GlobalStat &=~ ACC_CALI;
@@ -52,22 +49,50 @@ void IMU_Processing(void)
 }
 
 /***********************
-失控保护.触发条件:条件1必须满足,条件2和3满足其一
-1.飞行状态
-2.侧翻接近或超过90度
-3.两秒未收到遥控器信号
+失控保护.满足以下任意条件时触发
+*侧翻超过75度
+*超过2秒未收到遥控信号
+触发结果:
+超过10秒未收到遥控信号则直接锁定,否则:
+低于降落油门则直接锁定,
+否则进行姿态保持,油门保持为降落油门
 **********************/
-void Fail_Safe(void)
+void Fail_Safe(char state)
 {
-	if(RCdata[2]<NORMALSPEED)
+	if(state==3)
+		GlobalStat&=~MOTOR_LOCK;
+	if(throttle<NORMALSPEED-110)
 		GlobalStat&=~MOTOR_LOCK;
 	else
 	{
 		RCdata[0]=500;
 		RCdata[1]=500;
-		RCdata[2]=NORMALSPEED;
+		throttle=NORMALSPEED-100;
 		RCdata[3]=500;
 	}
+}
+
+/***********************
+定时检测是否收到遥控器信号与蓝牙信号
+*@period:100ms
+**********************/
+void RC_Monitor(void)
+{
+	ErrCnt++;
+	if(ErrCnt>=ERR_TIME)
+	{
+		if(ErrCnt<LOST_TIME)
+			Fail_Safe(2);
+		else
+		{
+			Fail_Safe(3);
+			ErrCnt--;
+		}
+	}
+	if(STAT_PORT & STAT_Pin)
+		LED3_PORT |= LED3_Pin;
+	else
+		LED3_PORT &=~ LED3_Pin;
 }
 
 /***********************
@@ -79,13 +104,8 @@ void RC_Processing(void)
 	switch(FcnWord)
 	{
 	case P_STAT:
-		if(RxTemp[1]!=WHO_AM_I)
-			break;
-		if(RxTemp[0] & MOTOR_LOCK)
-		{
-			if(RCdata[2]<=LOWSPEED)
-				GlobalStat|=MOTOR_LOCK;
-		}
+		if((RxTemp[0]&MOTOR_LOCK)&&(throttle<=LOWSPEED))
+			GlobalStat|=MOTOR_LOCK;
 		else
 			GlobalStat&=~MOTOR_LOCK;
 		if((RxTemp[0] & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_SPEED)
@@ -98,50 +118,38 @@ void RC_Processing(void)
 		RCdata[1]=(RxTemp[2]<<8) | RxTemp[3];
 		RCdata[2]=(RxTemp[4]<<8) | RxTemp[5];
 		RCdata[3]=(RxTemp[6]<<8) | RxTemp[7];
+		throttle=moderate(RCdata[2],NORMALSPEED);
 		break;
-	case P_REQ_CTRL:
+	case P_REQ1:
 		ReqMsg1=RxTemp[0];
-		ReqMsg2=RxTemp[1];
+		break;
+	case P_REQ2:
+		ReqMsg2=RxTemp[0];
 		if(ReqMsg2 & REQ_ACC_CALI)
 			GlobalStat|=ACC_CALI;
 		if(ReqMsg2 & REQ_GYRO_CALI)
 			GlobalStat|=GYRO_CALI;
 		break;
+	case P_REQ3:
+		ReqMsg3=RxTemp[0];
+		break;
 	case P_ROL_CTRL:
 		adrR.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrR.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		RolBias=(short)(RxTemp[6]*256.0f+RxTemp[7])/100.0f;
-		ReqMsg2|=REQ_ROL_CTRL;
+		RolBias=(short)(RxTemp[6]*256.0f+RxTemp[7])/100;
 		break;
 	case P_PIT_CTRL:
 		adrP.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrP.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		PitBias=(short)(RxTemp[6]*256.0f+RxTemp[7])/100.0f;
-		ReqMsg2|=REQ_PIT_CTRL;
+		PitBias=(short)(RxTemp[6]*256.0f+RxTemp[7])/100;
+	case P_YAW_CTRL:
+		Kyaw=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 	default:break;
 	}
-	if((Qpos.q1>0.7)||(Qpos.q2>0.7))
-	Fail_Safe();
-}
-
-/***********************
-定时是否收到遥控器信号
-*@period:100ms
-**********************/
-void RC_Monitor(void)
-{
-	ErrCnt++;
-	if(ErrCnt>=ERR_TIME)
-	{
-		Fail_Safe();
-		ErrCnt--;
-	}
-	if(STAT_PORT & STAT_Pin)
-		LED3_PORT |= LED3_Pin;
-	else
-		LED3_PORT &=~ LED3_Pin;
+	if((roll>75)||(pitch>75))
+	Fail_Safe(1);
 }
 
 void RC_Data_Send(void)
@@ -158,23 +166,11 @@ void RC_Data_Send(void)
 	}
 	if(ReqMsg1 & REQ_ATTI)
 	{
-		float roll=Matan2(2*(Qpos.q0*Qpos.q1+Qpos.q2*Qpos.q3),1-2*(Qpos.q1*Qpos.q1+Qpos.q2*Qpos.q2))*57.3f;
-		float pitch=Masin(2*(Qpos.q0*Qpos.q2-Qpos.q1*Qpos.q3))*57.3f;
-		float yaw=Matan2(2*(Qpos.q1*Qpos.q2+Qpos.q0*Qpos.q3),1-2*(Qpos.q2*Qpos.q2+Qpos.q3*Qpos.q3))*57.3f;
 		sdata[0]=(s16)(roll*100);
 		sdata[1]=(s16)(pitch*100);
 		sdata[2]=(s16)(yaw*100);
 		XDAA_Send_S16_Data(sdata,3,P_ATTI);
 		ReqMsg1 &=~ REQ_ATTI;
-	}
-	if(ReqMsg1 & REQ_QUATERNION)
-	{
-		sdata[0]=(s16)(Qpos.q0*10000);
-		sdata[1]=(s16)(Qpos.q1*10000);
-		sdata[2]=(s16)(Qpos.q2*10000);
-		sdata[3]=(s16)(Qpos.q3*10000);
-		XDAA_Send_S16_Data(sdata,4,P_QUATERNION);
-		ReqMsg1 &=~ REQ_QUATERNION;
 	}
 	if(ReqMsg1 & REQ_SENSOR)
 	{
@@ -190,12 +186,21 @@ void RC_Data_Send(void)
 	}
 	if(ReqMsg1 & REQ_MOTOR)
 	{
-		sdata[0]=MOTOR1;
-		sdata[1]=MOTOR2;
-		sdata[2]=MOTOR3;
-		sdata[3]=MOTOR4;
+		sdata[0]=PwmOut[0];
+		sdata[1]=PwmOut[1];
+		sdata[2]=PwmOut[2];
+		sdata[3]=PwmOut[3];
 		XDAA_Send_S16_Data(sdata,4,P_MOTOR);
 		ReqMsg1 &=~ REQ_MOTOR;
+	}
+	if(ReqMsg1 & REQ_QUATERNION)
+	{
+		sdata[0]=(s16)(q0*10000);
+		sdata[1]=(s16)(q1*10000);
+		sdata[2]=(s16)(q2*10000);
+		sdata[3]=(s16)(q3*10000);
+		XDAA_Send_S16_Data(sdata,4,P_QUATERNION);
+		ReqMsg1 &=~ REQ_QUATERNION;
 	}
 	//上位机请求2
 	if(ReqMsg2 & REQ_ROL_CTRL)
@@ -216,23 +221,33 @@ void RC_Data_Send(void)
 		XDAA_Send_S16_Data(sdata,4,P_PIT_CTRL);
 		ReqMsg2 &=~ REQ_PIT_CTRL;
 	}
-	if(ReqMsg2 & REQ_ROL_STAT)
+	if(ReqMsg2 & REQ_YAW_CTRL)
 	{
-		sdata[0]=(s16)(adrR.SpeEst*100);
+		sdata[0]=(s16)(Kyaw*1000);
+		sdata[1]=0;
+		sdata[2]=0;
+		sdata[3]=0;
+		XDAA_Send_S16_Data(sdata,4,P_YAW_CTRL);
+		ReqMsg2 &=~ REQ_PIT_CTRL;
+	}
+	//上位机请求3
+	if(ReqMsg3 & 0x0F)
+	{
+		sdata[0]=0;
+		sdata[1]=0;
+		sdata[2]=0;
+		sdata[3]=0;
+		XDAA_Send_S16_Data(sdata,4,P_CHART1);
+		ReqMsg3 &=~ 0x0F;
+	}
+	if(ReqMsg3 & 0xF0)
+	{
+		sdata[0]=(s16)(adrR.AccEst*100);
 		sdata[1]=(s16)(adrR.u*100);
 		sdata[2]=(s16)(adrR.w*100);
-		sdata[3]=(s16)(adrR.AccEst*100);
-		XDAA_Send_S16_Data(sdata,4,P_ROL_STAT);
-		ReqMsg2 &=~ REQ_ROL_STAT;
-	}
-	if(ReqMsg2 & REQ_PIT_STAT)
-	{
-		sdata[0]=(s16)(adrP.SpeEst*100);
-		sdata[1]=(s16)(adrP.u*100);
-		sdata[2]=(s16)(adrP.w*1000);
-		sdata[3]=(s16)(adrP.AccEst*100);
-		XDAA_Send_S16_Data(sdata,4,P_PIT_STAT);
-		ReqMsg2 &=~ REQ_PIT_STAT;
+		sdata[3]=(s16)(adrR.SpeEst*100);
+		XDAA_Send_S16_Data(sdata,4,P_CHART2);
+		ReqMsg3 &=~ 0xF0;
 	}
 	Total_Send();
 }

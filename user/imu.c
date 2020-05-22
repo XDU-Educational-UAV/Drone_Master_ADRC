@@ -5,7 +5,6 @@
 
 #define T  0.002    //采样周期,2ms
 #define hT 0.001   //采样周期/2
-#define qT 0.0005  //采样周期/4
 #define Kp 2.0f
 #define Ki 0.1f
 const float accA[3][3]={
@@ -14,6 +13,7 @@ const float accA[3][3]={
 	{-0.0234375f,0.0390625f,1}};
 short accB[3]={-4955,-3893,1866};
 short gyroB[3]={447,45,-1};
+float q0=1,q1=0,q2=0,q3=0;
 
 /***********************
 用事先确定的校准参数校正加速度计原始数据
@@ -90,15 +90,12 @@ u8 Gyro_Calibrate(AxisInt gyro)
 /***********************
 六轴融合互补滤波
 **********************/
-void IMUupdate(AxisInt acc,AxisInt gyro,Quaternion *Q)
+void IMUupdate(AxisInt acc,AxisInt gyro,float *rol,float *pit,float *yaw)
 {
 	float ax=acc.x,ay=acc.y,az=acc.z;  //归一化加速度计数据暂存
-	if(ax==0 && ay==0 && az==0)return;
-	float q0=Q->q0,q1=Q->q1,q2=Q->q2,q3=Q->q3;  //四元数暂存
-	if(q0==0 && q1==0 && q2==0 && q3==0)return;
-	static float ogx=0,ogy=0,ogz=0;  //上一时刻的角速度
-	static float oq0=1,oq1=0,oq2=0,oq3=0;  //上一时刻的四元数
 	static float exInt=0,eyInt=0;
+	if(ax==0 && ay==0 && az==0)return;
+	if(q0==0 && q1==0 && q2==0 && q3==0)return;
 	//重力加速度归一化
 	float norm=Q_rsqrt(ax*ax+ay*ay+az*az);
 	ax*=norm;ay*=norm;az*=norm;
@@ -116,22 +113,16 @@ void IMUupdate(AxisInt acc,AxisInt gyro,Quaternion *Q)
 	float gx=GyroToRad(gyro.x)+Kp*ex+exInt;
 	float gy=GyroToRad(gyro.y)+Kp*ey+eyInt;
 	float gz=GyroToRad(gyro.z);
-	//改进欧拉法数值求解四元数微分方程
-	float K0=-oq1*ogx-oq2*ogy-oq3*ogz;
-	float K1=oq0*ogx-oq3*ogy+oq2*ogz;
-	float K2=oq3*ogx+oq0*ogy-oq1*ogz;
-	float K3=-oq2*ogx+oq1*ogy+oq0*ogz;
-	K0+=-q1*gx-q2*gy-q3*gz;
-	K1+=q0*gx-q3*gy+q2*gz;
-	K2+=q3*gx+q0*gy-q1*gz;
-	K3+=-q2*gx+q1*gy+q0*gz;
-	q0+=qT*K0;
-	q1+=qT*K1;
-	q2+=qT*K2;
-	q3+=qT*K3;
-	//四元数归一化与输出,新值保存
+	//欧拉法数值求解四元数微分方程
+	q0 += hT*(-q1*gx-q2*gy-q3*gz);
+	q1 += hT*(q0*gx-q3*gy+q2*gz);
+	q2 += hT*(q3*gx+q0*gy-q1*gz);
+	q3 += hT*(-q2*gx+q1*gy+q0*gz);
+	//四元数归一化
 	norm=Q_rsqrt(q0*q0+q1*q1+q2*q2+q3*q3);
-	Q->q0=q0*norm;Q->q1=q1*norm;Q->q2=q2*norm;Q->q3=q3*norm;
-	oq0=Q->q0;oq1=Q->q1;oq2=Q->q2;oq3=Q->q3;
-	ogx=gx;ogy=gy;ogz=gz;
+	q0*=norm;q1*=norm;q2*=norm;q3*=norm;
+	//四元数转欧拉角
+	*rol=Matan2(2*(q0*q1+q2*q3),1-2*(q1*q1+q2*q2))*57.3f;
+	*pit=Masin(2*(q0*q2-q1*q3))*57.3f;
+	*yaw=Matan2(2*(q0*q3+q1*q2),1-2*(q2*q2+q3*q3))*57.3f;
 }
