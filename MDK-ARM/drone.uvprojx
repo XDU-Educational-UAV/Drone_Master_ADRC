@@ -18,7 +18,7 @@
           <Vendor>STMicroelectronics</Vendor>
           <PackID>Keil.STM32G0xx_DFP.1.2.0</PackID>
           <PackURL>https://www.keil.com/pack/</PackURL>
-          <Cpu>IRAM(0x20000000-0x20001FFF) IROM(0x8000000-0x800FFFF)  CLOCK(8000000) CPUTYPE("Cortex-M0+")</Cpu>
+          <Cpu>IRAM(0x20000000-0x20001FFF) IROM(0x8000000-0x800FFFF) CLOCK(8000000) CPUTYPE("Cortex-M0+")</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
           <StartupFile></StartupFile>
           <FlashDriverDll></FlashDriverDll>
@@ -48,7 +48,7 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>testCube\</OutputDirectory>
+          <OutputDirectory>drone\</OutputDirectory>
           <OutputName>drone</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
@@ -134,11 +134,11 @@
             <RunIndependent>0</RunIndependent>
             <UpdateFlashBeforeDebugging>1</UpdateFlashBeforeDebugging>
             <Capability>1</Capability>
-            <DriverSelection>4096</DriverSelection>
+            <DriverSelection>4107</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
-          <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3>"" ()</Flash3>
+          <Flash2>STLink\ST-LINKIII-KEIL_SWO.dll</Flash2>
+          <Flash3></Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32G030xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;           ../Drivers/STM32G0xx_HAL_Driver/Inc;           ../Drivers/STM32G0xx_HAL_Driver/Inc/Legacy;           ../Drivers/CMSIS/Device/ST/STM32G0xx/Include;           ../Drivers/CMSIS/Include;           ..\user</IncludePath>
+              <IncludePath>../Inc;../Drivers/STM32G0xx_HAL_Driver/Inc;../Drivers/STM32G0xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G0xx/Include;../Drivers/CMSIS/Include;..\user</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -563,19 +563,9 @@
           <GroupName>user</GroupName>
           <Files>
             <File>
-              <FileName>protocol.c</FileName>
+              <FileName>adrc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\user\protocol.c</FilePath>
-            </File>
-            <File>
-              <FileName>mpu6050.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\mpu6050.c</FilePath>
-            </File>
-            <File>
-              <FileName>mpuiic.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\mpuiic.c</FilePath>
+              <FilePath>..\user\adrc.c</FilePath>
             </File>
             <File>
               <FileName>control.c</FileName>
@@ -588,9 +578,14 @@
               <FilePath>..\user\imu.c</FilePath>
             </File>
             <File>
-              <FileName>task.c</FileName>
+              <FileName>mpu6050.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\user\task.c</FilePath>
+              <FilePath>..\user\mpu6050.c</FilePath>
+            </File>
+            <File>
+              <FileName>mpuiic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\mpuiic.c</FilePath>
             </File>
             <File>
               <FileName>mymath.c</FileName>
@@ -598,9 +593,14 @@
               <FilePath>..\user\mymath.c</FilePath>
             </File>
             <File>
-              <FileName>adrc.c</FileName>
+              <FileName>protocol.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\user\adrc.c</FilePath>
+              <FilePath>..\user\protocol.c</FilePath>
+            </File>
+            <File>
+              <FileName>task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\task.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -1,8 +1,9 @@
 # 小四轴飞控
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/9380144ef91447e3a5b0288f9083182a)](https://app.codacy.com/gh/uav-operation-system/Drone_Master_ADRC?utm_source=github.com&utm_medium=referral&utm_content=uav-operation-system/Drone_Master_ADRC&utm_campaign=Badge_Grade_Dashboard)
+version V1.01
+=======
 
-version V1.00
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/9380144ef91447e3a5b0288f9083182a)](https://app.codacy.com/gh/uav-operation-system/Drone_Master_ADRC?utm_source=github.com&utm_medium=referral&utm_content=uav-operation-system/Drone_Master_ADRC&utm_campaign=Badge_Grade_Dashboard)
 
          HEAD
 	 M2    ↑     M3
@@ -28,17 +29,6 @@ version V1.00
 [地面站](https://github.com/xd15zhn/GroundStation/blob/master/GroundStation/bin/Release/GroundStation.exe)
 
 ## 代码说明
-
-### 关于偏航
-偏航方向为开环控制,即完全放弃偏航方向的反馈
-
-{imu.c}互补滤波中z轴角速度不接受加速度计校准
-
-如果考虑偏航方向需注意:
-
-1. 是速度反馈还是姿态反馈;
-
-2. 四元数q3的变化.
 
 ### 用户代码
 尽量不改动自动生成的代码文件，用户添加的代码文件在user文件夹中，与自动生成的代码文件分离。
@@ -71,6 +61,8 @@ version V1.00
 
 起飞后（即油门超过一定值）2秒内未接收到正确的遥控信号或飞机姿态倾角过大，将进入失控保护模式尝试平稳降落，重新收到信号或姿态恢复正常则可随时恢复控制。
 
-解锁后2秒内未接收到正确的遥控信号自动锁定
+解锁后2秒内未接收到正确的遥控信号自动锁定。
+
+起飞前建议进行传感器校准。
 
 ## bug与隐患

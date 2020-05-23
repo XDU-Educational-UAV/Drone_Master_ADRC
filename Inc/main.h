@@ -37,11 +37,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-#define LED1_PORT  LED1_GPIO_Port->ODR
-#define LED2_PORT  LED2_GPIO_Port->ODR
-#define LED3_PORT  LED3_GPIO_Port->ODR
-#define LED4_PORT  LED4_GPIO_Port->ODR
-#define STAT_PORT  STAT_GPIO_Port->IDR
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -91,6 +87,11 @@ void Error_Handler(void);
 #define SCL_Pin GPIO_PIN_8
 #define SCL_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
+#define LED1_PORT  LED1_GPIO_Port->ODR
+#define LED2_PORT  LED2_GPIO_Port->ODR
+#define LED3_PORT  LED3_GPIO_Port->ODR
+#define LED4_PORT  LED4_GPIO_Port->ODR
+#define STAT_PORT  STAT_GPIO_Port->IDR
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
