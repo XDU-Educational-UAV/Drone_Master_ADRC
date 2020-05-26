@@ -21,11 +21,11 @@ version V1.02
 
 	 M1          M4
 
+![chip3d](github.com/xd15zhn/drone/raw/master/chip3d.png)
+
 电机M1至M4分别为逆顺逆顺。
 
 默认为姿态模式,可通过地面站进行更改。
-
-![chip3d](github.com/xd15zhn/drone/blob/master/chip3d.png)
 
 [地面站](https://github.com/xd15zhn/GroundStation/blob/master/GroundStation/bin/Release/GroundStation.exe)
 
