@@ -12,7 +12,6 @@ typedef struct
 	short x,y,z;
 }AxisInt;
 
-extern float q0,q1,q2,q3;
 void Acc_Correct(AxisInt *acc);
 void Gyro_Correct(AxisInt *gyro);
 u8 Acc_Calibrate(AxisInt acc);

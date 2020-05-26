@@ -4,12 +4,14 @@
 ********************************************/
 
 /*串口接收部分**********************************/
+
 u8 RxData;  //从串口收到的一个字节
-u8 FcnWord;  //功能字节(跨文件全局变量)
-u8 LenWord;  //长度字节(跨文件全局变量)
-u8 RxTemp[12];  //临时保存串口接收到的待用数据(跨文件全局变量)
-u8 GlobalStat=0;  //全局状态(跨文件全局变量)
-u8 RcvCnt=0;  //待处理的数据帧个数(跨文件全局变量)
+//以下变量供其它文件读取
+u8 FcnWord;  //功能字节
+u8 LenWord;  //长度字节
+u8 RxTemp[12];  //临时保存串口接收到的待用数据
+u8 GlobalStat=0;  //全局状态
+u8 RcvCnt=0;  //待处理的数据帧个数
 
 /***********************
 建立DMA接收通道,从地面站/遥控器接收数据
@@ -82,6 +84,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 
 /*串口发送部分**********************************/
+
 u8 DataToSend[16];  //待发送的数据
 u8 SendBuff[SENDBUF_SIZE];  //发送缓冲区
 u8 SendBuff2[SENDBUF_SIZE];  //发送缓冲区2
@@ -154,6 +157,30 @@ void XDAA_Send_U8_Data(u8 *data,u8 len,u8 fcn)
 	DataToSend[cnt++]=len;
 	for(i=0;i<len;i++)
 		DataToSend[cnt++]=data[i];
+	for(i=0;i<cnt;i++)
+		checksum+=DataToSend[i];
+	DataToSend[cnt++]=checksum;
+	DMA_Stuff(DataToSend,cnt);
+}
+/***********************
+*@data:s32型数据
+*@len:数据个数
+*@fcn:功能字
+**********************/
+void XDAA_Send_HighSpeed_Data(float data1,float data2)
+{
+	u8 i,cnt=0,checksum=0;
+	int temp=data1*65536;
+	DataToSend[cnt++]='@';
+	DataToSend[cnt++]=BYTE3(temp);
+	DataToSend[cnt++]=BYTE2(temp);
+	DataToSend[cnt++]=BYTE1(temp);
+	DataToSend[cnt++]=BYTE0(temp);
+	temp=data2*65536;
+	DataToSend[cnt++]=BYTE3(temp);
+	DataToSend[cnt++]=BYTE2(temp);
+	DataToSend[cnt++]=BYTE1(temp);
+	DataToSend[cnt++]=BYTE0(temp);
 	for(i=0;i<cnt;i++)
 		checksum+=DataToSend[i];
 	DataToSend[cnt++]=checksum;
