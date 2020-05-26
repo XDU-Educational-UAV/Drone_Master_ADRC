@@ -153,20 +153,20 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 } 
 
 /* USER CODE BEGIN 1 */
-//电压值乘2000.先计算上一次的转换结果再开始转换
+//测得的电压值乘2000.先计算上一次的转换结果再开始转换
+//电压典型值0x93E,约1.906V
 u16 Get_Battery_Voltage(void)
 {
-	static u32 voltage=0x93E;
-	static u16 AdcBuf[8]={0x93E};
-	u32 AdcSum=0;
-	u16 AdcData=(voltage*3300-100000)>>11;
+	static u32 voltage;
+	static u16 AdcBuf[8];
+	u16 AdcData=(voltage*3300-30000)>>11;
+	u32 AdcSum=AdcData;
 	for(char i=0;i<7;i++)
 	{
 		AdcBuf[i]=AdcBuf[i+1];
 		AdcSum+=AdcBuf[i];
 	}
 	AdcBuf[7]=AdcData;
-	AdcSum+=AdcData;
 	AdcSum>>=3;
 	HAL_ADC_Start_DMA(&hadc1,&voltage,1);
 	return AdcSum;

@@ -19,6 +19,7 @@
 #define P_REQ1         0xC1  //读参数1
 #define P_REQ2         0xC2  //读参数2
 #define P_REQ3         0xC3  //读参数3
+#define P_REQ4         0xC4  //读参数4
 //GlobalStat
 #define MOTOR_LOCK     0x01  //已解锁
 #define ACC_CALI       0x02  //准备校准加速度计
@@ -55,8 +56,9 @@ extern u8 GlobalStat;  //被control.c,task.c调用
 extern u8 RcvCnt;
 
 void Protocol_Init(void);
+void Total_Send(void);
 void XDAA_Send_S16_Data(s16 *data,u8 len,u8 fcn);
 void XDAA_Send_U8_Data(u8 *data,u8 len,u8 fcn);
-void Total_Send(void);
+void XDAA_Send_HighSpeed_Data(float data1,float data2);
 
 #endif

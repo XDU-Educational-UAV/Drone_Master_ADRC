@@ -12,10 +12,10 @@ x1'=x2;x2'=-x2+u+w;
 #define T       0.002
 void ADRC_LESO(ADRC_Param *adrc,float y)
 {
-	float e=y-adrc->SpeEst;
-	adrc->SpeEst+=(adrc->AccEst+15.0f*e)*T;
-	adrc->AccEst+=(adrc->u-adrc->AccEst+adrc->w +75.0f*e)*T;
-	adrc->w+=125.0f*e*T;
+	float e=y- adrc->SpeEst;
+	adrc->SpeEst +=(adrc->AccEst +30.0f*e)*T;
+	adrc->AccEst +=(adrc->B * adrc->u - adrc->A * adrc->AccEst + adrc->w +300.0f*e)*T;
+	adrc->w += 1000.0f*e*T;
 }
 
 //以下函数暂时未用上

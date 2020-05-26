@@ -6,7 +6,7 @@ RC_Prepare();                  对接收机的信号进行预处理
 IMU_Processing();              姿态解算更新，MPU6050数据校准
 ********************************************/
 
-u8 ReqMsg1=0,ReqMsg2=0,ReqMsg3=0;  //上位机指令
+u8 ReqMsg[4]={0};  //上位机指令
 u8 ErrCnt=0;  //未收到遥控器信号的次数
 AxisInt acc;  //三轴加速度校准后数据
 //以下参数为控制器所使用
@@ -121,34 +121,39 @@ void RC_Processing(void)
 		throttle=moderate(RCdata[2],NORMALSPEED);
 		break;
 	case P_REQ1:
-		ReqMsg1=RxTemp[0];
+		ReqMsg[0]=RxTemp[0];
 		break;
 	case P_REQ2:
-		ReqMsg2=RxTemp[0];
-		if(ReqMsg2 & REQ_ACC_CALI)
+		ReqMsg[1]=RxTemp[0];
+		if(ReqMsg[1] & REQ_ACC_CALI)
 			GlobalStat|=ACC_CALI;
-		if(ReqMsg2 & REQ_GYRO_CALI)
+		if(ReqMsg[1] & REQ_GYRO_CALI)
 			GlobalStat|=GYRO_CALI;
 		break;
 	case P_REQ3:
-		ReqMsg3=RxTemp[0];
+		ReqMsg[2]=RxTemp[0];
+		break;
+	case P_REQ4:
+		ReqMsg[3]=RxTemp[0];
 		break;
 	case P_ROL_CTRL:
 		adrR.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrR.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		RolBias=(short)(RxTemp[6]*256.0f+RxTemp[7])/100;
+		adrR.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
 		break;
 	case P_PIT_CTRL:
 		adrP.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
 		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrP.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		PitBias=(short)(RxTemp[6]*256.0f+RxTemp[7])/100;
+		adrP.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/100;
 	case P_YAW_CTRL:
 		Kyaw=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
+		adrP.A=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
+		adrP.B=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
 	default:break;
 	}
-	if((roll>75)||(pitch>75))
+	if((ABS(roll)>75)||(ABS(pitch)>75))
 	Fail_Safe(1);
 }
 
@@ -157,97 +162,109 @@ void RC_Data_Send(void)
 	ErrCnt=0;
 	s16 sdata[6];
 	//上位机请求1
-	if(ReqMsg1 & REQ_STAT)
+	if(ReqMsg[0] & REQ_STAT)
 	{
 		u16 voltage=Get_Battery_Voltage();
 		u8 udata[3]={GlobalStat,BYTE1(voltage),BYTE0(voltage)};
 		XDAA_Send_U8_Data(udata,3,P_STAT);
-		ReqMsg1 &=~ REQ_STAT;
+		ReqMsg[0] &=~ REQ_STAT;
 	}
-	if(ReqMsg1 & REQ_ATTI)
+	if(ReqMsg[0] & REQ_ATTI)
 	{
 		sdata[0]=(s16)(roll*100);
 		sdata[1]=(s16)(pitch*100);
 		sdata[2]=(s16)(yaw*100);
 		XDAA_Send_S16_Data(sdata,3,P_ATTI);
-		ReqMsg1 &=~ REQ_ATTI;
+		ReqMsg[0] &=~ REQ_ATTI;
 	}
-	if(ReqMsg1 & REQ_SENSOR)
+	if(ReqMsg[0] & REQ_SENSOR)
 	{
 		sdata[0]=acc.x;sdata[1]=acc.y;sdata[2]=acc.z;
 		sdata[3]=gyro.x;sdata[4]=gyro.y;sdata[5]=gyro.z;
 		XDAA_Send_S16_Data(sdata,6,P_SENSOR);
-		ReqMsg1 &=~ REQ_SENSOR;
+		ReqMsg[0] &=~ REQ_SENSOR;
 	}
-	if(ReqMsg1 & REQ_RC)
+	if(ReqMsg[0] & REQ_RC)
 	{
 		XDAA_Send_S16_Data(RCdata,4,P_CTRL);
-		ReqMsg1 &=~ REQ_RC;
+		ReqMsg[0] &=~ REQ_RC;
 	}
-	if(ReqMsg1 & REQ_MOTOR)
+	if(ReqMsg[0] & REQ_MOTOR)
 	{
-		sdata[0]=PwmOut[0];
-		sdata[1]=PwmOut[1];
-		sdata[2]=PwmOut[2];
-		sdata[3]=PwmOut[3];
+		sdata[0]=MOTOR1;
+		sdata[1]=MOTOR2;
+		sdata[2]=MOTOR3;
+		sdata[3]=MOTOR4;
 		XDAA_Send_S16_Data(sdata,4,P_MOTOR);
-		ReqMsg1 &=~ REQ_MOTOR;
+		ReqMsg[0] &=~ REQ_MOTOR;
 	}
-	if(ReqMsg1 & REQ_QUATERNION)
+	if(ReqMsg[0] & REQ_QUATERNION)
 	{
+		float x=DegToRad(roll/2.0f);
+		float y=DegToRad(pitch/2.0f);
+		float z=DegToRad(yaw/2.0f);
+		float q0=Mcos(x)*Mcos(y)*Mcos(z)+Msin(x)*Msin(y)*Msin(z);
+		float q1=Msin(x)*Mcos(y)*Mcos(z)-Mcos(x)*Msin(y)*Msin(z);
+		float q2=Mcos(x)*Msin(y)*Mcos(z)+Msin(x)*Mcos(y)*Msin(z);
+		float q3=Mcos(x)*Mcos(y)*Msin(z)-Msin(x)*Msin(y)*Mcos(z);
 		sdata[0]=(s16)(q0*10000);
 		sdata[1]=(s16)(q1*10000);
 		sdata[2]=(s16)(q2*10000);
 		sdata[3]=(s16)(q3*10000);
 		XDAA_Send_S16_Data(sdata,4,P_QUATERNION);
-		ReqMsg1 &=~ REQ_QUATERNION;
+		ReqMsg[0] &=~ REQ_QUATERNION;
 	}
 	//上位机请求2
-	if(ReqMsg2 & REQ_ROL_CTRL)
+	if(ReqMsg[1] & REQ_ROL_CTRL)
 	{
 		sdata[0]=(s16)(adrR.KpIn*1000);
 		sdata[1]=(s16)(adrR.KdIn*1000);
 		sdata[2]=(s16)(adrR.KpOut*1000);
-		sdata[3]=(s16)(RolBias*100);
+		sdata[3]=(s16)(adrR.Kw*1000);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_CTRL);
-		ReqMsg2 &=~ REQ_ROL_CTRL;
+		ReqMsg[1] &=~ REQ_ROL_CTRL;
 	}
-	if(ReqMsg2 & REQ_PIT_CTRL)
+	if(ReqMsg[1] & REQ_PIT_CTRL)
 	{
 		sdata[0]=(s16)(adrP.KpIn*1000);
 		sdata[1]=(s16)(adrP.KdIn*1000);
 		sdata[2]=(s16)(adrP.KpOut*1000);
-		sdata[3]=(s16)(PitBias*100);
+		sdata[3]=(s16)(adrP.Kw*1000);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_CTRL);
-		ReqMsg2 &=~ REQ_PIT_CTRL;
+		ReqMsg[1] &=~ REQ_PIT_CTRL;
 	}
-	if(ReqMsg2 & REQ_YAW_CTRL)
+	if(ReqMsg[1] & REQ_YAW_CTRL)
 	{
 		sdata[0]=(s16)(Kyaw*1000);
-		sdata[1]=0;
-		sdata[2]=0;
+		sdata[1]=(s16)(adrP.A*1000);
+		sdata[2]=(s16)(adrP.B*1000);
 		sdata[3]=0;
 		XDAA_Send_S16_Data(sdata,4,P_YAW_CTRL);
-		ReqMsg2 &=~ REQ_PIT_CTRL;
+		ReqMsg[1] &=~ REQ_YAW_CTRL;
 	}
 	//上位机请求3
-	if(ReqMsg3 & 0x0F)
+	if(ReqMsg[2] & 0x0F)
 	{
-		sdata[0]=0;
+		sdata[0]=(s16)(adrP.SpeEst*100);
+		sdata[1]=(s16)(GyroToDeg(gyro.y)*100);
+		sdata[2]=(s16)(adrP.u*100);
+		sdata[3]=(s16)(adrP.w*100);
+		XDAA_Send_S16_Data(sdata,4,P_CHART1);
+		ReqMsg[2] &=~ 0x0F;
+	}
+	if(ReqMsg[2] & 0xF0)
+	{
+		sdata[0]=(s16)(adrP.AccEst*100);
 		sdata[1]=0;
 		sdata[2]=0;
 		sdata[3]=0;
-		XDAA_Send_S16_Data(sdata,4,P_CHART1);
-		ReqMsg3 &=~ 0x0F;
-	}
-	if(ReqMsg3 & 0xF0)
-	{
-		sdata[0]=(s16)(adrR.AccEst*100);
-		sdata[1]=(s16)(adrR.u*100);
-		sdata[2]=(s16)(adrR.w*100);
-		sdata[3]=(s16)(adrR.SpeEst*100);
 		XDAA_Send_S16_Data(sdata,4,P_CHART2);
-		ReqMsg3 &=~ 0xF0;
+		ReqMsg[2] &=~ 0xF0;
 	}
-	Total_Send();
+}
+
+void HighSpeed_Data_Send(void)
+{
+	if(!ReqMsg[3])return;
+	XDAA_Send_HighSpeed_Data(adrR.u,GyroToDeg(gyro.x));
 }

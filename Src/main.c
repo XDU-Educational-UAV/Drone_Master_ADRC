@@ -166,6 +166,8 @@ int main(void)
 		{
 			IMU_Processing();
 			Motor_Iner_loop();
+			HighSpeed_Data_Send();
+			Total_Send();
 			TaskFlag&=~TASK_2ms;
 		}
 		if(TaskFlag & TASK_10ms)
