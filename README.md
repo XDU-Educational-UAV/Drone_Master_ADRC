@@ -21,7 +21,7 @@ version V1.02
 
 	 M1          M4
 
-![chip3d](github.com/xd15zhn/drone/raw/master/chip3d.png)
+![chip3d](https://github.com/xd15zhn/drone/raw/master/chip3d.png)
 
 电机M1至M4分别为逆顺逆顺。
 
