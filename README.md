@@ -1,9 +1,8 @@
 # 小四轴飞控
 
-version V1.01
-=======
-
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/9380144ef91447e3a5b0288f9083182a)](https://app.codacy.com/gh/uav-operation-system/Drone_Master_ADRC?utm_source=github.com&utm_medium=referral&utm_content=uav-operation-system/Drone_Master_ADRC&utm_campaign=Badge_Grade_Dashboard)
+
+version V1.02
 
          HEAD
 	 M2    ↑     M3
@@ -21,6 +20,8 @@ version V1.01
 	   /         \
 
 	 M1          M4
+
+![chip3d](https://github.com/xd15zhn/drone/raw/master/chip3d.png)
 
 电机M1至M4分别为逆顺逆顺。
 

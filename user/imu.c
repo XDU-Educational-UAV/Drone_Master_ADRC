@@ -13,7 +13,6 @@ const float accA[3][3]={
 	{-0.0234375f,0.0390625f,1}};
 short accB[3]={-4955,-3893,1866};
 short gyroB[3]={447,45,-1};
-float q0=1,q1=0,q2=0,q3=0;
 
 /***********************
 用事先确定的校准参数校正加速度计原始数据
@@ -93,9 +92,11 @@ u8 Gyro_Calibrate(AxisInt gyro)
 void IMUupdate(AxisInt acc,AxisInt gyro,float *rol,float *pit,float *yaw)
 {
 	float ax=acc.x,ay=acc.y,az=acc.z;  //归一化加速度计数据暂存
+	static float q0=1,q1=0,q2=0,q3=0;
 	static float exInt=0,eyInt=0;
-	if(ax==0 && ay==0 && az==0)return;
-	if(q0==0 && q1==0 && q2==0 && q3==0)return;
+	if(ax==0 && ay==0 && az==0) return;
+	if(q0==0 && q1==0 && q2==0 && q3==0) return;
+	float q0t=q0,q1t=q1,q2t=q2,q3t=q3;
 	//重力加速度归一化
 	float norm=Q_rsqrt(ax*ax+ay*ay+az*az);
 	ax*=norm;ay*=norm;az*=norm;
@@ -114,10 +115,10 @@ void IMUupdate(AxisInt acc,AxisInt gyro,float *rol,float *pit,float *yaw)
 	float gy=GyroToRad(gyro.y)+Kp*ey+eyInt;
 	float gz=GyroToRad(gyro.z);
 	//欧拉法数值求解四元数微分方程
-	q0 += hT*(-q1*gx-q2*gy-q3*gz);
-	q1 += hT*(q0*gx-q3*gy+q2*gz);
-	q2 += hT*(q3*gx+q0*gy-q1*gz);
-	q3 += hT*(-q2*gx+q1*gy+q0*gz);
+	q0=q0t+hT*(-q1*gx-q2*gy-q3*gz);
+	q1=q1t+hT*(q0*gx-q3*gy+q2*gz);
+	q2=q2t+hT*(q3*gx+q0*gy-q1*gz);
+	q3=q3t+hT*(-q2*gx+q1*gy+q0*gz);
 	//四元数归一化
 	norm=Q_rsqrt(q0*q0+q1*q1+q2*q2+q3*q3);
 	q0*=norm;q1*=norm;q2*=norm;q3*=norm;

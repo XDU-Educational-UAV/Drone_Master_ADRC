@@ -36,6 +36,7 @@ void IMU_Processing(void);
 void RC_Processing(void);
 void RC_Monitor(void);
 void RC_Data_Send(void);
+void HighSpeed_Data_Send(void);
 //ÔÚcontrol.cÖÐ
 void Para_Init(void);
 void Motor_Iner_loop(void);

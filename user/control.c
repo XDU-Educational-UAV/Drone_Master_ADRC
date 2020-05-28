@@ -14,10 +14,11 @@ X型四轴,从左后方电机编号为1开始顺时针编号,1电机螺旋桨为逆时针
 void Para_Init(void)
 {
 	MOTOR1=PwmOut[0];MOTOR2=PwmOut[1];MOTOR3=PwmOut[2];MOTOR4=PwmOut[3];
-	adrR.KpOut=2.0f;adrR.KpIn=0.7f;adrR.KdIn=0.02f;adrR.Kw=0;
-	adrP.KpOut=0;adrP.KpIn=0;adrP.KdIn=0;adrP.Kw=0;
+	adrR.KpOut=1.2f;adrR.KpIn=0.5f;adrR.KdIn=0;adrR.Kw=0;
+	adrR.A=1;adrR.B=0.1f;
+	adrP.A=1;adrP.B=0.1f;
+	adrP.KpOut=1.2f;adrP.KpIn=0.6f;adrP.KdIn=0;adrP.Kw=0;
 	Kyaw=0;
-	RolBias=0;PitBias=0;YawBias=0;
 }
 
 /**********************
@@ -65,8 +66,8 @@ void Motor_Outer_loop(void)
 {
 	if(GlobalStat & SPEED_MODE)
 	{
-		adrR.PosOut=PwmToDegAdd(RCdata[0])/adrR.KpIn;
-		adrP.PosOut=PwmToDegAdd(RCdata[1])/adrP.KpIn;
+		adrR.PosOut=PwmToDegAdd(RCdata[0]);
+		adrP.PosOut=1000-PwmToDegAdd(RCdata[1]);
 	}
 	else
 	{
@@ -75,7 +76,5 @@ void Motor_Outer_loop(void)
 		adrR.PosOut=adrR.KpOut*(RolExp-roll);
 		adrP.PosOut=adrP.KpOut*(pitch-PitExp);
 	}
-	adrR.PosOut+=RolBias;
-	adrP.PosOut+=PitBias;
-	YawOut=PwmToDegAdd(RCdata[3]+YawBias)-Kyaw*GyroToDeg(gyro.z);
+	YawOut=PwmToDegAdd(RCdata[3])-Kyaw*GyroToDeg(gyro.z);
 }
