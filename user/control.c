@@ -8,16 +8,15 @@ Motor_Outer_loop();
 X型四轴,从左后方电机编号为1开始顺时针编号,1电机螺旋桨为逆时针
 ********************************************/
 
+short PwmOut[4];  //油门输出,把值赋给定时器,输出PWM
 /**********************
 控制参数初始化
 **********************/
 void Para_Init(void)
 {
 	MOTOR1=PwmOut[0];MOTOR2=PwmOut[1];MOTOR3=PwmOut[2];MOTOR4=PwmOut[3];
-	adrR.KpOut=1.2f;adrR.KpIn=0.5f;adrR.KdIn=0;adrR.Kw=0;
-	adrR.A=1;adrR.B=0.1f;
-	adrP.A=1;adrP.B=0.1f;
-	adrP.KpOut=1.2f;adrP.KpIn=0.6f;adrP.KdIn=0;adrP.Kw=0;
+	adrR.KpOut=1.0f;adrR.KpIn=0.35f;adrR.KiIn=0;adrR.KdIn=0;adrR.Kw=0;
+	adrP.KpOut=1.0f;adrP.KpIn=0.35f;adrP.KiIn=0;adrP.KdIn=0;adrP.Kw=0;
 	Kyaw=0;
 }
 
@@ -26,16 +25,31 @@ void Para_Init(void)
 **********************/
 void Motor_Iner_loop(void)
 {
-	float gx=GyroToDeg(gyro.x);
-	float gy=GyroToDeg(gyro.y);
-	ADRC_LESO(&adrR,gx);
-	ADRC_LESO(&adrP,gy);
-	adrR.u=adrR.KpIn*(adrR.PosOut-gx)-adrR.KdIn*adrR.AccEst-adrR.Kw*adrR.w;
-	adrP.u=adrP.KpIn*(adrP.PosOut-gy)-adrP.KdIn*adrP.AccEst-adrP.Kw*adrP.w;
-	PwmOut[0]=throttle+DegToPwm(-adrR.u-adrP.u-YawOut);
-	PwmOut[1]=throttle+DegToPwm(-adrR.u+adrP.u+YawOut);
-	PwmOut[2]=throttle+DegToPwm(+adrR.u+adrP.u-YawOut);
-	PwmOut[3]=throttle+DegToPwm(+adrR.u-adrP.u+YawOut);
+	static short cnt=0;
+	if(GlobalStat & IDTFY_MODE)
+	{
+		adrP.u=10.0f*Msin(0.001f*cnt);
+		PwmOut[0]=RCdata[2]+DegToPwm(+PwmToDegAdd(RCdata[1])-adrP.u);
+		PwmOut[1]=RCdata[2]+DegToPwm(-PwmToDegAdd(RCdata[1])+adrP.u);
+		PwmOut[2]=RCdata[2]+DegToPwm(-PwmToDegAdd(RCdata[1])+adrP.u);
+		PwmOut[3]=RCdata[2]+DegToPwm(+PwmToDegAdd(RCdata[1])-adrP.u);
+		cnt++;
+	}
+	else
+	{
+		ADRC_LESO(&adrR,GyroToDeg(gyro.x));
+		ADRC_LESO(&adrP,GyroToDeg(gyro.y));
+		ADRC_TD(&adrR);
+		ADRC_TD(&adrP);
+		adrR.u = adrR.KpIn * (adrR.x1-adrR.SpeEst) + adrR.KiIn * adrR.SpeInt + adrR.KdIn * (adrR.x2-adrR.AccEst) - adrR.Kw * adrR.w;
+		adrP.u = adrP.KpIn * (adrP.x1-adrP.SpeEst) + adrP.KiIn * adrP.SpeInt + adrP.KdIn * (adrP.x2-adrP.AccEst) - adrP.Kw * adrP.w;
+		adrR.SpeInt += (adrR.x1-adrR.SpeEst) * T;
+		adrP.SpeInt += (adrP.x1-adrP.SpeEst) * T;
+		PwmOut[0]=RCdata[2]+DegToPwm(-adrR.u-adrP.u-YawOut);
+		PwmOut[1]=RCdata[2]+DegToPwm(-adrR.u+adrP.u+YawOut);
+		PwmOut[2]=RCdata[2]+DegToPwm(+adrR.u+adrP.u-YawOut);
+		PwmOut[3]=RCdata[2]+DegToPwm(+adrR.u-adrP.u+YawOut);
+	}
 	if(!(GlobalStat & MOTOR_LOCK))
 	{
 		MOTOR1=0;
@@ -43,7 +57,7 @@ void Motor_Iner_loop(void)
 		MOTOR3=0;
 		MOTOR4=0;
 	}
-	else if(throttle<=LOWSPEED)
+	else if(RCdata[2]<=LOWSPEED)
 	{
 		MOTOR1=LOWSPEED;
 		MOTOR2=LOWSPEED;
@@ -67,7 +81,7 @@ void Motor_Outer_loop(void)
 	if(GlobalStat & SPEED_MODE)
 	{
 		adrR.PosOut=PwmToDegAdd(RCdata[0]);
-		adrP.PosOut=1000-PwmToDegAdd(RCdata[1]);
+		adrP.PosOut=PwmToDegAdd(1000-RCdata[1]);
 	}
 	else
 	{
@@ -76,5 +90,5 @@ void Motor_Outer_loop(void)
 		adrR.PosOut=adrR.KpOut*(RolExp-roll);
 		adrP.PosOut=adrP.KpOut*(pitch-PitExp);
 	}
-	YawOut=PwmToDegAdd(RCdata[3])-Kyaw*GyroToDeg(gyro.z);
+	YawOut=Kyaw*(PwmToDegAdd(RCdata[3])-GyroToDeg(gyro.z));
 }

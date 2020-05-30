@@ -157,9 +157,9 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 //电压典型值0x93E,约1.906V
 u16 Get_Battery_Voltage(void)
 {
-	static u32 voltage;
-	static u16 AdcBuf[8];
-	u16 AdcData=(voltage*3300-30000)>>11;
+	static u32 voltage=0x93E;
+	static u16 AdcBuf[8]={0};
+	u16 AdcData=(voltage*3300-35000)>>11;
 	u32 AdcSum=AdcData;
 	for(char i=0;i<7;i++)
 	{

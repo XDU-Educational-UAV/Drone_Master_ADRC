@@ -15,9 +15,6 @@ float roll,pitch,yaw;  //飞行器姿态
 short RCdata[4];  //遥控器控制数据
 ADRC_Param adrR,adrP;  //自抗扰控制器参数
 float Kyaw,YawOut;  //yaw轴比例控制与控制器输出
-float RolBias,PitBias,YawBias;  //固定偏差,用于抵消扰动
-float throttle=0;  //平衡位置处缓和的实际参考油门输出
-short PwmOut[4];  //油门输出,把值赋给定时器,输出PWM
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -61,13 +58,13 @@ void Fail_Safe(char state)
 {
 	if(state==3)
 		GlobalStat&=~MOTOR_LOCK;
-	if(throttle<NORMALSPEED-110)
+	if(RCdata[2]<NORMALSPEED-110)
 		GlobalStat&=~MOTOR_LOCK;
 	else
 	{
 		RCdata[0]=500;
 		RCdata[1]=500;
-		throttle=NORMALSPEED-100;
+		RCdata[2]=NORMALSPEED-100;
 		RCdata[3]=500;
 	}
 }
@@ -104,7 +101,7 @@ void RC_Processing(void)
 	switch(FcnWord)
 	{
 	case P_STAT:
-		if((RxTemp[0]&MOTOR_LOCK)&&(throttle<=LOWSPEED))
+		if((RxTemp[0]&MOTOR_LOCK)&&(RCdata[2]<=LOWSPEED))
 			GlobalStat|=MOTOR_LOCK;
 		else
 			GlobalStat&=~MOTOR_LOCK;
@@ -118,7 +115,6 @@ void RC_Processing(void)
 		RCdata[1]=(RxTemp[2]<<8) | RxTemp[3];
 		RCdata[2]=(RxTemp[4]<<8) | RxTemp[5];
 		RCdata[3]=(RxTemp[6]<<8) | RxTemp[7];
-		throttle=moderate(RCdata[2],NORMALSPEED);
 		break;
 	case P_REQ1:
 		ReqMsg[0]=RxTemp[0];
@@ -138,19 +134,21 @@ void RC_Processing(void)
 		break;
 	case P_ROL_CTRL:
 		adrR.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
-		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
+		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1e5f;
 		adrR.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
 		adrR.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
 		break;
 	case P_PIT_CTRL:
 		adrP.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
-		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
+		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1e5f;
 		adrP.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
 		adrP.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/100;
+		break;
 	case P_YAW_CTRL:
 		Kyaw=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
-		adrP.A=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
-		adrP.B=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
+		adrR.KiIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
+		adrP.KiIn=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
+		break;
 	default:break;
 	}
 	if((ABS(roll)>75)||(ABS(pitch)>75))
@@ -218,7 +216,7 @@ void RC_Data_Send(void)
 	if(ReqMsg[1] & REQ_ROL_CTRL)
 	{
 		sdata[0]=(s16)(adrR.KpIn*1000);
-		sdata[1]=(s16)(adrR.KdIn*1000);
+		sdata[1]=(s16)(adrR.KdIn*1e5);
 		sdata[2]=(s16)(adrR.KpOut*1000);
 		sdata[3]=(s16)(adrR.Kw*1000);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_CTRL);
@@ -227,7 +225,7 @@ void RC_Data_Send(void)
 	if(ReqMsg[1] & REQ_PIT_CTRL)
 	{
 		sdata[0]=(s16)(adrP.KpIn*1000);
-		sdata[1]=(s16)(adrP.KdIn*1000);
+		sdata[1]=(s16)(adrP.KdIn*1e5);
 		sdata[2]=(s16)(adrP.KpOut*1000);
 		sdata[3]=(s16)(adrP.Kw*1000);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_CTRL);
@@ -236,8 +234,8 @@ void RC_Data_Send(void)
 	if(ReqMsg[1] & REQ_YAW_CTRL)
 	{
 		sdata[0]=(s16)(Kyaw*1000);
-		sdata[1]=(s16)(adrP.A*1000);
-		sdata[2]=(s16)(adrP.B*1000);
+		sdata[1]=(s16)(adrR.KiIn*1000);
+		sdata[2]=(s16)(adrP.KiIn*1000);
 		sdata[3]=0;
 		XDAA_Send_S16_Data(sdata,4,P_YAW_CTRL);
 		ReqMsg[1] &=~ REQ_YAW_CTRL;
@@ -255,9 +253,9 @@ void RC_Data_Send(void)
 	if(ReqMsg[2] & 0xF0)
 	{
 		sdata[0]=(s16)(adrP.AccEst*100);
-		sdata[1]=0;
-		sdata[2]=0;
-		sdata[3]=0;
+		sdata[1]=(s16)(adrP.PosOut*100);
+		sdata[2]=(s16)(adrP.x1*100);
+		sdata[3]=(s16)(adrP.x2*100);
 		XDAA_Send_S16_Data(sdata,4,P_CHART2);
 		ReqMsg[2] &=~ 0xF0;
 	}
@@ -265,6 +263,15 @@ void RC_Data_Send(void)
 
 void HighSpeed_Data_Send(void)
 {
-	if(!ReqMsg[3])return;
-	XDAA_Send_HighSpeed_Data(adrR.u,GyroToDeg(gyro.x));
+	static short count=5000;
+	if(ReqMsg[3])
+	{
+		count=0;
+		ReqMsg[3]=0;
+	}
+	if(count<5000)
+	{
+		XDAA_Send_HighSpeed_Data(DegToGyro(adrP.u),gyro.y);
+		count++;
+	}
 }

@@ -2,6 +2,7 @@
 #define	_IMU_H_
 
 #include "mymath.h"
+typedef unsigned char u8;
 
 typedef struct
 {

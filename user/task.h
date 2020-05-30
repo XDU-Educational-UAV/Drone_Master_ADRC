@@ -27,9 +27,6 @@ extern float roll,pitch,yaw;
 extern short RCdata[];
 extern ADRC_Param adrR,adrP;
 extern float Kyaw,YawOut;
-extern float RolBias,PitBias,YawBias;
-extern float throttle;
-extern short PwmOut[];
 
 //ÔÚtask.cÖÐ
 void IMU_Processing(void);

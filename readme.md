@@ -2,7 +2,7 @@
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/9380144ef91447e3a5b0288f9083182a)](https://app.codacy.com/gh/uav-operation-system/Drone_Master_ADRC?utm_source=github.com&utm_medium=referral&utm_content=uav-operation-system/Drone_Master_ADRC&utm_campaign=Badge_Grade_Dashboard)
 
-version V1.02
+version V1.03
 
          HEAD
 	 M2    ↑     M3
@@ -21,13 +21,15 @@ version V1.02
 
 	 M1          M4
 
+![chip3d](./image/chip3d.png)
+
 电机M1至M4分别为逆顺逆顺。
 
 默认为姿态模式,可通过地面站进行更改。
 
 [地面站](https://github.com/xd15zhn/GroundStation/blob/master/GroundStation/bin/Release/GroundStation.exe)
 
-## 代码说明
+# 代码说明
 
 ### 用户代码
 尽量不改动自动生成的代码文件，用户添加的代码文件在user文件夹中，与自动生成的代码文件分离。
@@ -64,4 +66,20 @@ version V1.02
 
 起飞前建议进行传感器校准。
 
-## bug与隐患
+### 控制框图
+
+![控制框图](./image/control1.03.png)
+
+注：图中的控制器相关的增益参数非实际值，仅供参考。
+
+### 版本更新
+
+V1.03更新内容
+
+* 推出完整版ADRC。
+
+* 更改高速数据帧40。
+
+* 修正电压检测bug。
+
+* 此版本是各种代码相对最全的版本，但没有经过测试。以后的版本会进行部分裁剪。

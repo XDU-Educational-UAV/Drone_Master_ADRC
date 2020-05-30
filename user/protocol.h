@@ -24,9 +24,11 @@
 #define MOTOR_LOCK     0x01  //已解锁
 #define ACC_CALI       0x02  //准备校准加速度计
 #define GYRO_CALI      0x04  //准备校准陀螺仪
+#define IDTFY_MODE     0x10  //参数辨识模式
 #define SPEED_MODE     0x20  //速度模式
 #define TX_BUSY        0x40  //串口数据正通过DMA发送
 #define FAIL_SAFE      0x80  //飞行故障
+//stat
 #define REQ_MODE_ATTI  0x40
 #define REQ_MODE_SPEED 0x80
 //ReqMsg1
@@ -59,6 +61,6 @@ void Protocol_Init(void);
 void Total_Send(void);
 void XDAA_Send_S16_Data(s16 *data,u8 len,u8 fcn);
 void XDAA_Send_U8_Data(u8 *data,u8 len,u8 fcn);
-void XDAA_Send_HighSpeed_Data(float data1,float data2);
+void XDAA_Send_HighSpeed_Data(short x,short y);
 
 #endif
