@@ -33,5 +33,6 @@ float Msin(float rad);
 float Mexp(float x);
 short moderate(short x,short T);
 float IIR_LowPassFilter(float DataIn,float *delay);
+float OneOrder_Filter(float DataIn,float delay);
 
 #endif

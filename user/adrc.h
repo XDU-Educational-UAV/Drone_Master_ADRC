@@ -15,14 +15,15 @@ typedef struct
 	float KdIn;      //内环角速度微分控制
 	float Kw;        //扰动补偿增益
 	//运行参数
-	float PosOut;    //姿态控制器输出
+	float AttOut;    //外环输出
+	float SpeErr;    //内环角速度期望输入
 	float SpeInt;    //内环角速度期望输入积分
 	float SpeEst;    //角速度估计
 	float AccEst;    //角加速度估计
 	float w;         //总扰动
 	float u;         //控制器最终输出
-	float x1;        //跟踪微分器输出跟踪信号
-	float x2;        //跟踪微分器输出微分信号
+	//IIR滤波使用
+	float AccDelay;  //角加速度
 }ADRC_Param;
 
 void ADRC_LESO(ADRC_Param *adrc,float y);

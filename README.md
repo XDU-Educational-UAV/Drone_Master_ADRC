@@ -2,7 +2,7 @@
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/9380144ef91447e3a5b0288f9083182a)](https://app.codacy.com/gh/uav-operation-system/Drone_Master_ADRC?utm_source=github.com&utm_medium=referral&utm_content=uav-operation-system/Drone_Master_ADRC&utm_campaign=Badge_Grade_Dashboard)
 
-version V1.03
+![logo](./image/logo.jpg)
 
          HEAD
 	 M2    ↑     M3
@@ -30,6 +30,8 @@ version V1.03
 [地面站](https://github.com/xd15zhn/GroundStation/blob/master/GroundStation/bin/Release/GroundStation.exe)
 
 # 代码说明
+
+version V1.04
 
 ### 用户代码
 尽量不改动自动生成的代码文件，用户添加的代码文件在user文件夹中，与自动生成的代码文件分离。
@@ -60,7 +62,8 @@ version V1.03
 
 锁定与解锁均需要上位机发送正确的指令。
 
-起飞后（即油门超过一定值）2秒内未接收到正确的遥控信号或飞机姿态倾角过大，将进入失控保护模式尝试平稳降落，重新收到信号或姿态恢复正常则可随时恢复控制。
+起飞后（即油门超过一定值）2秒内未接收到正确的遥控信号或飞机姿态倾角过大，将进入失控保护模式尝试平稳降落，
+长时间未收到信号则关闭油门。重新收到信号或姿态恢复正常则可随时恢复控制。
 
 解锁后2秒内未接收到正确的遥控信号自动锁定。
 
@@ -68,18 +71,25 @@ version V1.03
 
 ### 控制框图
 
-![控制框图](./image/control1.03.png)
+![控制框图](./image/control1.04.png)
 
 注：图中的控制器相关的增益参数非实际值，仅供参考。
 
+内环控制频率500Hz，外环控制频率100Hz。
+
+每个通道的控制器关键运行参数范围大致如下(一般在范围内，不排除超过范围的可能):
+
+控制器输出u:±45  角速度(°/s)gyro:±250  角加速度(°/s^2)AccEst±250  
+总扰动w:±320
+
 ### 版本更新
 
-V1.03更新内容
+V1.04更新内容
 
-* 推出完整版ADRC。
+* 修正pitch轴外环控制bug
 
-* 更改高速数据帧40。
+* 将用于波形显示的发送数据改为10ms发送一次，并使没有收到上位机指令时停止发送
 
-* 修正电压检测bug。
+* 高速发送数据2ms一次，发送10秒即5000此自动停止发送
 
-* 此版本是各种代码相对最全的版本，但没有经过测试。以后的版本会进行部分裁剪。
+此版本通过了飞行测试。

@@ -129,9 +129,22 @@ short moderate(short x,short T)
 **********************/
 float IIR_LowPassFilter(float DataIn,float *delay)
 {
-	delay[0] = DataIn + 0.76295f*delay[1] - 0.283438f*delay[2];
-	float DataOut = 0.129f*delay[0] + 0.258f*delay[1] + 0.129f*delay[2];
+	delay[0] = DataIn + 1.7f*delay[1] - 0.7325f*delay[2];
+	float DataOut = (delay[0] + 2*delay[1] + delay[2]) * 0.008125f;
 	delay[2] = delay[1];
 	delay[1] = delay[0];
 	return DataOut;
+}
+
+/***********************
+一阶IIR低通滤波
+*@delay:需要暂存1个状态变量的存储空间
+*@DataIn:每次新增的数据
+输出滤波后的新增数据
+**********************/
+float OneOrder_Filter(float DataIn,float delay)
+{
+	float DataOut = DataIn + 0.25 * delay;
+	delay = DataOut;
+	return DataOut * 0.75;
 }
