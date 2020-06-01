@@ -71,7 +71,7 @@ version V1.04
 
 ### 控制框图
 
-![控制框图](./image/control1.03.png)
+![控制框图](./image/control1.04.png)
 
 注：图中的控制器相关的增益参数非实际值，仅供参考。
 
