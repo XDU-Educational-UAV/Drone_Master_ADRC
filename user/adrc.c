@@ -12,8 +12,9 @@ void ADRC_LESO(ADRC_Param *adrc,float y)
 {
 	float e = y - adrc->SpeEst;
 	adrc->SpeEst += (adrc->AccEst + 30.0f * e) * T;
-	adrc->AccEst +=(adrc->u - adrc->AccEst + adrc->w + 300.0f * ADRC_fal_5(e)) * T;
-	adrc->w += 1000.0f * ADRC_fal_25(e) * T;
+	adrc->AccEst +=(adrc->u - adrc->AccEst + adrc->w + 300.0f * e) * T;
+	adrc->w += 1000.0f * e * T;
+	adrc->AccEst=OneOrder_Filter(adrc->AccEst, adrc->AccDelay);
 }
 
 /**********************
@@ -43,13 +44,13 @@ float ADRC_fhan(float x1, float x2)
 
 /**********************
 跟踪微分器
-**********************/
+**********************
 void ADRC_TD(ADRC_Param* adrc)
 {
 	float u = ADRC_fhan(adrc->x1 - adrc->PosOut, adrc->x2);
 	adrc->x1 += T * adrc->x2;
 	adrc->x2 += T * u;
-}
+}*/
 
 /**********************
 非线性函数fal(e, 0.5, 0.01)

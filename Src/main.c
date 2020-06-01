@@ -173,6 +173,7 @@ int main(void)
 		if(TaskFlag & TASK_10ms)
 		{
 			Motor_Outer_loop();
+			RC_Data_Send_10ms();
 			TaskFlag&=~TASK_10ms;
 		}
 		if(TaskFlag & TASK_100ms)

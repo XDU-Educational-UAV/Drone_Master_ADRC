@@ -134,15 +134,15 @@ void RC_Processing(void)
 		break;
 	case P_ROL_CTRL:
 		adrR.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
-		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1e5f;
+		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrR.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
 		adrR.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
 		break;
 	case P_PIT_CTRL:
 		adrP.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
-		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1e5f;
+		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
 		adrP.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		adrP.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/100;
+		adrP.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
 		break;
 	case P_YAW_CTRL:
 		Kyaw=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
@@ -216,7 +216,7 @@ void RC_Data_Send(void)
 	if(ReqMsg[1] & REQ_ROL_CTRL)
 	{
 		sdata[0]=(s16)(adrR.KpIn*1000);
-		sdata[1]=(s16)(adrR.KdIn*1e5);
+		sdata[1]=(s16)(adrR.KdIn*1000);
 		sdata[2]=(s16)(adrR.KpOut*1000);
 		sdata[3]=(s16)(adrR.Kw*1000);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_CTRL);
@@ -225,7 +225,7 @@ void RC_Data_Send(void)
 	if(ReqMsg[1] & REQ_PIT_CTRL)
 	{
 		sdata[0]=(s16)(adrP.KpIn*1000);
-		sdata[1]=(s16)(adrP.KdIn*1e5);
+		sdata[1]=(s16)(adrP.KdIn*1000);
 		sdata[2]=(s16)(adrP.KpOut*1000);
 		sdata[3]=(s16)(adrP.Kw*1000);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_CTRL);
@@ -240,38 +240,53 @@ void RC_Data_Send(void)
 		XDAA_Send_S16_Data(sdata,4,P_YAW_CTRL);
 		ReqMsg[1] &=~ REQ_YAW_CTRL;
 	}
-	//上位机请求3
+}
+
+void RC_Data_Send_10ms(void)
+{
+	s16 sdata[4];
+	static u8 cnt1=20,cnt2=20;
 	if(ReqMsg[2] & 0x0F)
+	{
+		cnt1=0;
+		ReqMsg[2] &=~ 0x0F;
+	}
+	if(cnt1<20)
 	{
 		sdata[0]=(s16)(adrP.SpeEst*100);
 		sdata[1]=(s16)(GyroToDeg(gyro.y)*100);
 		sdata[2]=(s16)(adrP.u*100);
 		sdata[3]=(s16)(adrP.w*100);
 		XDAA_Send_S16_Data(sdata,4,P_CHART1);
-		ReqMsg[2] &=~ 0x0F;
+		cnt1++;
 	}
 	if(ReqMsg[2] & 0xF0)
 	{
-		sdata[0]=(s16)(adrP.AccEst*100);
-		sdata[1]=(s16)(adrP.PosOut*100);
-		sdata[2]=(s16)(adrP.x1*100);
-		sdata[3]=(s16)(adrP.x2*100);
-		XDAA_Send_S16_Data(sdata,4,P_CHART2);
+		cnt2=0;
 		ReqMsg[2] &=~ 0xF0;
+	}
+	if(cnt2<20)
+	{
+		sdata[0]=(s16)(adrP.AccEst*100);
+		sdata[1]=(s16)(adrP.SpeErr*100);
+		sdata[2]=(s16)(adrP.SpeInt*100);
+		sdata[3]=0;
+		XDAA_Send_S16_Data(sdata,4,P_CHART2);
+		cnt2++;
 	}
 }
 
 void HighSpeed_Data_Send(void)
 {
-	static short count=5000;
+	static short cnt=5000;
 	if(ReqMsg[3])
 	{
-		count=0;
+		cnt=0;
 		ReqMsg[3]=0;
 	}
-	if(count<5000)
+	if(cnt<5000)
 	{
 		XDAA_Send_HighSpeed_Data(DegToGyro(adrP.u),gyro.y);
-		count++;
+		cnt++;
 	}
 }
