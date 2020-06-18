@@ -94,7 +94,7 @@ u8 MPU_Init(void)
 	status |= IIC_Write_Reg(0x23,0x00);  //关闭FIFO
 	status |= IIC_Write_Reg(0x6B,0x01);  //设置CLKSEL,PLL X轴为参考
 	status |= IIC_Write_Reg(0x6C,0x00);  //加速度与陀螺仪都工作
-	status |= MPU_Set_Gyro_Fsr(0);  //陀螺仪传感器,±250dps
+	status |= MPU_Set_Gyro_Fsr(2);  //陀螺仪传感器,±1000dps
 	status |= MPU_Set_Accel_Fsr(0);  //加速度传感器,±2g
 	status |= MPU_Set_Rate(500);  //设置采样率500Hz
 	status |= IIC_Read_Reg(0x75,&res);  //读取器件ID
