@@ -1,5 +1,7 @@
 # 小四轴飞控
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/745f8e19e0374c16acb3a0ab946dc669)](https://app.codacy.com/manual/xd15zhn/drone?utm_source=github.com&utm_medium=referral&utm_content=xd15zhn/drone&utm_campaign=Badge_Grade_Dashboard)
+
 ![logo](./image/logo.jpg)
 
          HEAD
