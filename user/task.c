@@ -8,13 +8,14 @@ IMU_Processing();              姿态解算更新，MPU6050数据校准
 
 u8 ReqMsg[4]={0};  //上位机指令
 u8 ErrCnt=0;  //未收到遥控器信号的次数
-AxisInt acc;  //三轴加速度校准后数据
+AxisInt Acc;  //三轴加速度校准后数据
 //以下参数为控制器所使用
-AxisInt gyro;  //三轴角速度校准后数据
+AxisInt Gyro;  //三轴角速度校准后数据
 float roll,pitch,yaw;  //飞行器姿态
 short RCdata[4];  //遥控器控制数据
-ADRC_Param adrR,adrP;  //自抗扰控制器参数
+ADRC_Param adrcX,adrcY;  //自抗扰控制器参数
 float Kyaw,YawOut;  //yaw轴比例控制与控制器输出
+short HighSpeedCnt=0;
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -25,32 +26,33 @@ void IMU_Processing(void)
 	static float IIRax[3],IIRay[3],IIRaz[3];
 	static float IIRgx[3],IIRgy[3],IIRgz[3];
 	AxisInt oacc,ogyro;
-	MPU_Get_Accelerometer(&acc.x,&acc.y,&acc.z);
-	MPU_Get_Gyroscope(&gyro.x,&gyro.y,&gyro.z);
-	oacc=acc;ogyro=gyro;
-	acc.x=IIR_LowPassFilter(oacc.x,IIRax);
-	acc.y=IIR_LowPassFilter(oacc.y,IIRay);
-	acc.z=IIR_LowPassFilter(oacc.z,IIRaz);
-	gyro.x=IIR_LowPassFilter(ogyro.x,IIRgx);
-	gyro.y=IIR_LowPassFilter(ogyro.y,IIRgy);
-	gyro.z=IIR_LowPassFilter(ogyro.z,IIRgz);
-	Acc_Correct(&acc);
-	Gyro_Correct(&gyro);
-	IMUupdate(acc,gyro,&roll,&pitch,&yaw);
+	MPU_Get_Accelerometer(&Acc.x,&Acc.y,&Acc.z);
+	MPU_Get_Gyroscope(&Gyro.x,&Gyro.y,&Gyro.z);
+	oacc=Acc;ogyro=Gyro;
+	Acc.x=IIR_LowPassFilter(oacc.x,IIRax);
+	Acc.y=IIR_LowPassFilter(oacc.y,IIRay);
+	Acc.z=IIR_LowPassFilter(oacc.z,IIRaz);
+	Gyro.x=IIR_LowPassFilter(ogyro.x,IIRgx);
+	Gyro.y=IIR_LowPassFilter(ogyro.y,IIRgy);
+	Gyro.z=IIR_LowPassFilter(ogyro.z,IIRgz);
+	Acc_Correct(&Acc);
+	Gyro_Correct(&Gyro);
+	IMUupdate(Acc,Gyro,&roll,&pitch,&yaw);
 	if(GlobalStat & ACC_CALI)
-		if(!Acc_Calibrate(acc))
+		if(!Acc_Calibrate(Acc))
 			GlobalStat &=~ ACC_CALI;
 	if(GlobalStat &GYRO_CALI)
-		if(!Gyro_Calibrate(gyro))
+		if(!Gyro_Calibrate(Gyro))
 			GlobalStat &=~ GYRO_CALI;
 }
 
 /***********************
 失控保护.满足以下任意条件时触发
-*侧翻超过75度
-*超过2秒未收到遥控信号
+原因1:侧翻超过75度(仅姿态模式)
+原因2:超过2秒未收到遥控信号
+原因3:超过10秒未收到遥控信号
 触发结果:
-超过10秒未收到遥控信号则直接锁定,否则:
+原因3直接锁定,否则:
 低于降落油门则直接锁定,
 否则进行姿态保持,油门保持为降落油门
 **********************/
@@ -58,7 +60,7 @@ void Fail_Safe(char state)
 {
 	if(state==3)
 		GlobalStat&=~MOTOR_LOCK;
-	if(RCdata[2]<NORMALSPEED-110)
+	else if(RCdata[2]<NORMALSPEED-110)
 		GlobalStat&=~MOTOR_LOCK;
 	else
 	{
@@ -133,31 +135,33 @@ void RC_Processing(void)
 		ReqMsg[3]=RxTemp[0];
 		break;
 	case P_ROL_CTRL:
-		adrR.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
-		adrR.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
-		adrR.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		adrR.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
+		adrcX.wo=(RxTemp[0]*256.0f+RxTemp[1])/100.0f;
+		adrcX.wc=(RxTemp[2]*256.0f+RxTemp[3])/100.0f;
+		adrcX.B=(RxTemp[4]*256.0f+RxTemp[5])/100.0f;
+		adrcX.KpOut=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
+		ADRC_ParamUpdate(&adrcX); 
 		break;
 	case P_PIT_CTRL:
-		adrP.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
-		adrP.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
-		adrP.KpOut=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
-		adrP.Kw=(short)(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
+		adrcY.wo=(RxTemp[0]*256.0f+RxTemp[1])/100.0f;
+		adrcY.wc=(RxTemp[2]*256.0f+RxTemp[3])/100.0f;
+		adrcY.B=(RxTemp[4]*256.0f+RxTemp[5])/100.0f;
+		adrcY.KpOut=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
+		ADRC_ParamUpdate(&adrcY);
 		break;
 	case P_YAW_CTRL:
 		Kyaw=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
-		adrR.KiIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
-		adrP.KiIn=(RxTemp[4]*256.0f+RxTemp[5])/1000.0f;
 		break;
 	default:break;
 	}
 	if((ABS(roll)>75)||(ABS(pitch)>75))
-	Fail_Safe(1);
+		if(!(GlobalStat & SPEED_MODE))
+			Fail_Safe(1);
 }
 
 void RC_Data_Send(void)
 {
 	ErrCnt=0;
+	if(HighSpeedCnt) return;
 	s16 sdata[6];
 	//上位机请求1
 	if(ReqMsg[0] & REQ_STAT)
@@ -177,8 +181,8 @@ void RC_Data_Send(void)
 	}
 	if(ReqMsg[0] & REQ_SENSOR)
 	{
-		sdata[0]=acc.x;sdata[1]=acc.y;sdata[2]=acc.z;
-		sdata[3]=gyro.x;sdata[4]=gyro.y;sdata[5]=gyro.z;
+		sdata[0]=Acc.x;sdata[1]=Acc.y;sdata[2]=Acc.z;
+		sdata[3]=Gyro.x;sdata[4]=Gyro.y;sdata[5]=Gyro.z;
 		XDAA_Send_S16_Data(sdata,6,P_SENSOR);
 		ReqMsg[0] &=~ REQ_SENSOR;
 	}
@@ -215,27 +219,27 @@ void RC_Data_Send(void)
 	//上位机请求2
 	if(ReqMsg[1] & REQ_ROL_CTRL)
 	{
-		sdata[0]=(s16)(adrR.KpIn*1000);
-		sdata[1]=(s16)(adrR.KdIn*1000);
-		sdata[2]=(s16)(adrR.KpOut*1000);
-		sdata[3]=(s16)(adrR.Kw*1000);
+		sdata[0]=(s16)(adrcX.wo*100);
+		sdata[1]=(s16)(adrcX.wc*100);
+		sdata[2]=(s16)(adrcX.B*100);
+		sdata[3]=(s16)(adrcX.KpOut*1000);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_CTRL);
 		ReqMsg[1] &=~ REQ_ROL_CTRL;
 	}
 	if(ReqMsg[1] & REQ_PIT_CTRL)
 	{
-		sdata[0]=(s16)(adrP.KpIn*1000);
-		sdata[1]=(s16)(adrP.KdIn*1000);
-		sdata[2]=(s16)(adrP.KpOut*1000);
-		sdata[3]=(s16)(adrP.Kw*1000);
+		sdata[0]=(s16)(adrcY.wo*100);
+		sdata[1]=(s16)(adrcY.wc*100);
+		sdata[2]=(s16)(adrcY.B*100);
+		sdata[3]=(s16)(adrcY.KpOut*1000);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_CTRL);
 		ReqMsg[1] &=~ REQ_PIT_CTRL;
 	}
 	if(ReqMsg[1] & REQ_YAW_CTRL)
 	{
 		sdata[0]=(s16)(Kyaw*1000);
-		sdata[1]=(s16)(adrR.KiIn*1000);
-		sdata[2]=(s16)(adrP.KiIn*1000);
+		sdata[1]=0;
+		sdata[2]=0;
 		sdata[3]=0;
 		XDAA_Send_S16_Data(sdata,4,P_YAW_CTRL);
 		ReqMsg[1] &=~ REQ_YAW_CTRL;
@@ -244,49 +248,49 @@ void RC_Data_Send(void)
 
 void RC_Data_Send_10ms(void)
 {
+	if(HighSpeedCnt) return;
 	s16 sdata[4];
-	static u8 cnt1=20,cnt2=20;
+	static u8 cnt1=0,cnt2=0;
 	if(ReqMsg[2] & 0x0F)
 	{
-		cnt1=0;
+		cnt1=20;
 		ReqMsg[2] &=~ 0x0F;
 	}
-	if(cnt1<20)
+	if(cnt1)
 	{
-		sdata[0]=(s16)(adrP.SpeEst*100);
-		sdata[1]=(s16)(GyroToDeg(gyro.y)*100);
-		sdata[2]=(s16)(adrP.u*100);
-		sdata[3]=(s16)(adrP.w*100);
+		sdata[0]=DegToGyro(adrcX.SpeEst);
+		sdata[1]=Gyro.x;
+		sdata[2]=(s16)(adrcX.u*100);
+		sdata[3]=(s16)(adrcX.w*100);
 		XDAA_Send_S16_Data(sdata,4,P_CHART1);
-		cnt1++;
+		cnt1--;
 	}
 	if(ReqMsg[2] & 0xF0)
 	{
-		cnt2=0;
+		cnt2=20;
 		ReqMsg[2] &=~ 0xF0;
 	}
-	if(cnt2<20)
+	if(cnt2)
 	{
-		sdata[0]=(s16)(adrP.AccEst*100);
-		sdata[1]=(s16)(adrP.SpeErr*100);
-		sdata[2]=(s16)(adrP.SpeInt*100);
+		sdata[0]=(s16)(adrcX.AccEst*100);
+		sdata[1]=(s16)(adrcX.AttOut*100);
+		sdata[2]=0;
 		sdata[3]=0;
 		XDAA_Send_S16_Data(sdata,4,P_CHART2);
-		cnt2++;
+		cnt2--;
 	}
 }
 
 void HighSpeed_Data_Send(void)
 {
-	static short cnt=5000;
 	if(ReqMsg[3])
 	{
-		cnt=0;
+		HighSpeedCnt=5000;
 		ReqMsg[3]=0;
 	}
-	if(cnt<5000)
+	while(HighSpeedCnt)
 	{
-		XDAA_Send_HighSpeed_Data(DegToGyro(adrP.u),gyro.y);
-		cnt++;
+		XDAA_Send_HighSpeed_Data(DegToGyro(adrcY.u),Gyro.y);
+		HighSpeedCnt--;
 	}
 }

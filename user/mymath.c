@@ -108,19 +108,6 @@ float Mexp(float x)
 	return *(float*)&i;
 }
 
-//油门在平衡位置处缓和
-short moderate(short x,short T)
-{
-	float y;
-	if(x<T-200)
-		y=((float)T-100)/((float)T-200)*x;
-	else if(x<T+200)
-		y=(x+T)>>1;
-	else
-		y=(900.0f-(float)T)/(800.0f-(float)T)*(x-T-200)+T+100;
-	return y;
-}
-
 /***********************
 二阶IIR低通滤波，直接II型结构
 *@delay:需要暂存3个状态变量的存储空间
@@ -144,7 +131,7 @@ float IIR_LowPassFilter(float DataIn,float *delay)
 **********************/
 float OneOrder_Filter(float DataIn,float delay)
 {
-	float DataOut = DataIn + 0.25 * delay;
+	float DataOut = DataIn + 0.25f * delay;
 	delay = DataOut;
-	return DataOut * 0.75;
+	return DataOut * 0.75f;
 }

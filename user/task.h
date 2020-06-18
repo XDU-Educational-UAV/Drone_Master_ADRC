@@ -22,10 +22,10 @@
 #define UNLOCKED      2    //解锁状态
 #define LOCK_TIME     20   //解锁时间,2秒
 
-extern AxisInt gyro;
+extern AxisInt Gyro;
 extern float roll,pitch,yaw;
 extern short RCdata[];
-extern ADRC_Param adrR,adrP;
+extern ADRC_Param adrcX,adrcY;
 extern float Kyaw,YawOut;
 
 //在task.c中
