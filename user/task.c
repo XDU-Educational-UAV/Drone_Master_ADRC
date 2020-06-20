@@ -15,7 +15,7 @@ float roll,pitch,yaw;  //飞行器姿态
 short RCdata[4];  //遥控器控制数据
 ADRC_Param adrcX,adrcY;  //自抗扰控制器参数
 float Kyaw,YawOut;  //yaw轴比例控制与控制器输出
-short HighSpeedCnt=0;
+short HighSpeedCnt=0;  //发送高速数据期间禁止其它发送任务
 
 /***********************
 姿态解算更新,MPU6050数据校准
@@ -107,11 +107,12 @@ void RC_Processing(void)
 			GlobalStat|=MOTOR_LOCK;
 		else
 			GlobalStat&=~MOTOR_LOCK;
-		if((RxTemp[0] & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_SPEED)
-			GlobalStat|=SPEED_MODE;
-		else if((RxTemp[0] & (REQ_MODE_SPEED+REQ_MODE_ATTI))==REQ_MODE_ATTI)
-			GlobalStat&=~SPEED_MODE;
-		break;
+		switch(RxTemp[0] & REQ_MODE_SEL)
+		{
+			case REQ_MODE_SPEED:GlobalStat|=SPEED_MODE;break;
+			case REQ_MODE_ATTI:GlobalStat&=~SPEED_MODE;break;
+			default:break;
+		}
 	case P_CTRL:
 		RCdata[0]=(RxTemp[0]<<8) | RxTemp[1];
 		RCdata[1]=(RxTemp[2]<<8) | RxTemp[3];
@@ -135,18 +136,16 @@ void RC_Processing(void)
 		ReqMsg[3]=RxTemp[0];
 		break;
 	case P_ROL_CTRL:
-		adrcX.wo=(RxTemp[0]*256.0f+RxTemp[1])/100.0f;
-		adrcX.wc=(RxTemp[2]*256.0f+RxTemp[3])/100.0f;
-		adrcX.B=(RxTemp[4]*256.0f+RxTemp[5])/100.0f;
+		adrcX.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
+		adrcX.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
+		adrcX.B=(RxTemp[4]*256.0f+RxTemp[5]);
 		adrcX.KpOut=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
-		ADRC_ParamUpdate(&adrcX); 
 		break;
 	case P_PIT_CTRL:
-		adrcY.wo=(RxTemp[0]*256.0f+RxTemp[1])/100.0f;
-		adrcY.wc=(RxTemp[2]*256.0f+RxTemp[3])/100.0f;
-		adrcY.B=(RxTemp[4]*256.0f+RxTemp[5])/100.0f;
+		adrcY.KpIn=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
+		adrcY.KdIn=(RxTemp[2]*256.0f+RxTemp[3])/1000.0f;
+		adrcY.B=(RxTemp[4]*256.0f+RxTemp[5]);
 		adrcY.KpOut=(RxTemp[6]*256.0f+RxTemp[7])/1000.0f;
-		ADRC_ParamUpdate(&adrcY);
 		break;
 	case P_YAW_CTRL:
 		Kyaw=(RxTemp[0]*256.0f+RxTemp[1])/1000.0f;
@@ -219,18 +218,18 @@ void RC_Data_Send(void)
 	//上位机请求2
 	if(ReqMsg[1] & REQ_ROL_CTRL)
 	{
-		sdata[0]=(s16)(adrcX.wo*100);
-		sdata[1]=(s16)(adrcX.wc*100);
-		sdata[2]=(s16)(adrcX.B*100);
+		sdata[0]=(s16)(adrcX.KpIn*1000);
+		sdata[1]=(s16)(adrcX.KdIn*1000);
+		sdata[2]=(s16)(adrcX.B);
 		sdata[3]=(s16)(adrcX.KpOut*1000);
 		XDAA_Send_S16_Data(sdata,4,P_ROL_CTRL);
 		ReqMsg[1] &=~ REQ_ROL_CTRL;
 	}
 	if(ReqMsg[1] & REQ_PIT_CTRL)
 	{
-		sdata[0]=(s16)(adrcY.wo*100);
-		sdata[1]=(s16)(adrcY.wc*100);
-		sdata[2]=(s16)(adrcY.B*100);
+		sdata[0]=(s16)(adrcY.KpIn*1000);
+		sdata[1]=(s16)(adrcY.KdIn*1000);
+		sdata[2]=(s16)(adrcY.B);
 		sdata[3]=(s16)(adrcY.KpOut*1000);
 		XDAA_Send_S16_Data(sdata,4,P_PIT_CTRL);
 		ReqMsg[1] &=~ REQ_PIT_CTRL;
@@ -258,10 +257,10 @@ void RC_Data_Send_10ms(void)
 	}
 	if(cnt1)
 	{
-		sdata[0]=DegToGyro(adrcX.SpeEst);
-		sdata[1]=Gyro.x;
-		sdata[2]=(s16)(adrcX.u*100);
-		sdata[3]=(s16)(adrcX.w*100);
+		sdata[0]=DegToGyro(adrcY.SpeEst);
+		sdata[1]=Gyro.y;
+		sdata[2]=(s16)(adrcY.u*100);
+		sdata[3]=(s16)adrcY.w;
 		XDAA_Send_S16_Data(sdata,4,P_CHART1);
 		cnt1--;
 	}
@@ -272,8 +271,8 @@ void RC_Data_Send_10ms(void)
 	}
 	if(cnt2)
 	{
-		sdata[0]=(s16)(adrcX.AccEst*100);
-		sdata[1]=(s16)(adrcX.AttOut*100);
+		sdata[0]=(s16)(adrcY.AccEst*100);
+		sdata[1]=(s16)(adrcY.AttOut*100);
 		sdata[2]=0;
 		sdata[3]=0;
 		XDAA_Send_S16_Data(sdata,4,P_CHART2);
