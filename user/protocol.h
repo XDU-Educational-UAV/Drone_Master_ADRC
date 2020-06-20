@@ -29,8 +29,10 @@
 #define TX_BUSY        0x40  //串口数据正通过DMA发送
 #define FAIL_SAFE      0x80  //飞行故障
 //stat
+#define REQ_MODE_SEL   0xC0
 #define REQ_MODE_ATTI  0x40
 #define REQ_MODE_SPEED 0x80
+#define REQ_MODE_IDTFY 0xC0
 //ReqMsg1
 #define REQ_STAT       0x01
 #define REQ_ATTI       0x02

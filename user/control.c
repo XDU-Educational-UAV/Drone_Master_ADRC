@@ -15,11 +15,10 @@ short PwmOut[4];  //油门输出,把值赋给定时器,输出PWM
 void Para_Init(void)
 {
 	MOTOR1 = PwmOut[0]; MOTOR2 = PwmOut[1]; MOTOR3 = PwmOut[2]; MOTOR4 = PwmOut[3];
-	adrcX.wc = 5.0f; adrcX.wo = 10.0f; adrcX.B = 10.0f; adrcX.KpOut = 2.0f;
-	adrcY.wc = 5.0f; adrcY.wo = 10.0f; adrcY.B = 10.0f; adrcY.KpOut = 2.0f;
-	ADRC_ParamUpdate(&adrcX);ADRC_ParamUpdate(&adrcY);
+	adrcX.KpOut = 2.0f; adrcX.B = 1000.0f; adrcX.KpIn = 1.0f; adrcX.KdIn = 0.1f;
+	adrcY.KpOut = 2.0f; adrcY.B = 1000.0f; adrcY.KpIn = 1.0f; adrcY.KdIn = 0.1f;
 	ADRC_ParamClear(&adrcX);ADRC_ParamClear(&adrcY);
-	Kyaw = 1;
+	Kyaw = 2.0f;
 }
 
 /**********************
@@ -47,8 +46,8 @@ void Motor_Iner_loop(void)
 	}
 	ADRC_LESO(&adrcX, GyroToDeg(Gyro.x));
 	ADRC_LESO(&adrcY, GyroToDeg(Gyro.y));
-	adrcX.u = (adrcX.KpIn * (adrcX.AttOut - adrcX.SpeEst) - adrcX.KdIn * adrcX.AccEst - adrcX.w) / adrcX.B;
-	adrcY.u = (adrcY.KpIn * (adrcY.AttOut - adrcY.SpeEst) - adrcY.KdIn * adrcY.AccEst - adrcY.w) / adrcY.B;
+	adrcX.u = adrcX.KpIn * (adrcX.AttOut - adrcX.SpeEst) - adrcX.KdIn * adrcX.AccEst - adrcX.w / adrcX.B;
+	adrcY.u = adrcY.KpIn * (adrcY.AttOut - adrcY.SpeEst) - adrcY.KdIn * adrcY.AccEst - adrcY.w / adrcY.B;
 	PwmOut[0] = RCdata[2] + DegToPwm(-adrcX.u - adrcY.u - YawOut);
 	PwmOut[1] = RCdata[2] + DegToPwm(-adrcX.u + adrcY.u + YawOut);
 	PwmOut[2] = RCdata[2] + DegToPwm(+adrcX.u + adrcY.u - YawOut);
