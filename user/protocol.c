@@ -25,52 +25,53 @@ void Protocol_Init(void)
 **********************/
 u8 XDAA_Data_Receive_Precess(void)
 {
-	static u8 zRxState=0,sum=0,i=0;
-	switch(zRxState)
+	static u8 RxState=0,sum=0,cnt=0;
+	switch(RxState)
 	{
 	case 0:  //帧头校验
 		if(RxData=='<')
 		{
 			sum=RxData;
-			zRxState=1;
+			RxState=1;
 		}
 		break;
 	case 1:  //功能字校验与保存
 		sum+=RxData;
 		FcnWord=RxData;
-		zRxState=2;
+		RxState=2;
 		break;
 	case 2:  //数据长度校验与保存
 		if(RxData<=12)
 		{
 			sum+=RxData;
 			LenWord=RxData;
-			zRxState=3;
+			RxState=3;
 		}
 		else
 		{
 			sum=0;
-			zRxState=0;
+			RxState=0;
 		}
 		break;
 	case 3:  //临时保存待用数据
 		sum+=RxData;
-		RxTemp[i++]=RxData;
-		if(i>=LenWord)
-			zRxState=4;
+		RxTemp[cnt++]=RxData;
+		if(cnt>=LenWord)
+			RxState=4;
 		break;
 	case 4:  //匹配校验和
-		zRxState=0;
-		i=0;
+		RxState=0;
+		cnt=0;
 		if(sum==RxData)
-			return 0;  //待用数据有效
+			return 0;  //收到了正确的数据帧
 		else
-			return 1;
+			return 2;  //数据帧出错
 	default:
-		zRxState=0;
-		return 1;
+		RxState=0;
+		cnt=0;
+		return 2;  //数据帧出错
 	}
-	return 1;  //待用数据无效
+	return 1;  //数据帧尚未接收完成
 }
 /***********************
 串口通过DMA方式接收到一个字节
@@ -167,20 +168,14 @@ void XDAA_Send_U8_Data(u8 *data,u8 len,u8 fcn)
 *@len:数据个数
 *@fcn:功能字
 **********************/
-void XDAA_Send_HighSpeed_Data(float data1,float data2)
+void XDAA_Send_HighSpeed_Data(short x,short y)
 {
 	u8 i,cnt=0,checksum=0;
-	int temp=data1*65536;
 	DataToSend[cnt++]='@';
-	DataToSend[cnt++]=BYTE3(temp);
-	DataToSend[cnt++]=BYTE2(temp);
-	DataToSend[cnt++]=BYTE1(temp);
-	DataToSend[cnt++]=BYTE0(temp);
-	temp=data2*65536;
-	DataToSend[cnt++]=BYTE3(temp);
-	DataToSend[cnt++]=BYTE2(temp);
-	DataToSend[cnt++]=BYTE1(temp);
-	DataToSend[cnt++]=BYTE0(temp);
+	DataToSend[cnt++]=BYTE1(x);
+	DataToSend[cnt++]=BYTE0(x);
+	DataToSend[cnt++]=BYTE1(y);
+	DataToSend[cnt++]=BYTE0(y);
 	for(i=0;i<cnt;i++)
 		checksum+=DataToSend[i];
 	DataToSend[cnt++]=checksum;

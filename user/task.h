@@ -22,20 +22,18 @@
 #define UNLOCKED      2    //解锁状态
 #define LOCK_TIME     20   //解锁时间,2秒
 
-extern AxisInt gyro;
+extern AxisInt Gyro;
 extern float roll,pitch,yaw;
 extern short RCdata[];
-extern ADRC_Param adrR,adrP;
+extern ADRC_Param adrcX,adrcY;
 extern float Kyaw,YawOut;
-extern float RolBias,PitBias,YawBias;
-extern float throttle;
-extern short PwmOut[];
 
 //在task.c中
 void IMU_Processing(void);
 void RC_Processing(void);
 void RC_Monitor(void);
 void RC_Data_Send(void);
+void RC_Data_Send_10ms(void);
 void HighSpeed_Data_Send(void);
 //在control.c中
 void Para_Init(void);
